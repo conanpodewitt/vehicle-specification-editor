@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
 from ui.CodeEditor import CodeEditor
+from vehicle_lang import verify
 
 class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""
@@ -62,18 +63,18 @@ class VCLEditor(QMainWindow):
         toolbar_layout.addStretch(1)
         
         # Compile buttons
-        compile_buttons_layout = QHBoxLayout()
-        self.compile_button = QPushButton("Compile")
-        self.compile_button.clicked.connect(self.compile_spec)
-        compile_buttons_layout.addWidget(self.compile_button)
+        #compile_buttons_layout = QHBoxLayout()
+        #self.compile_button = QPushButton("Compile")
+        #self.compile_button.clicked.connect(self.compile_spec)
+        #compile_buttons_layout.addWidget(self.compile_button)
         
-        toolbar_layout.addLayout(compile_buttons_layout)
+        #toolbar_layout.addLayout(compile_buttons_layout)
         
         # Add spacing
         #toolbar_layout.addStretch(1)
         
         # Verification buttons
-        #verify_buttons_layout = QHBoxLayout()
+        verify_buttons_layout = QHBoxLayout()
         #self.network_button = QPushButton("Set Network")
         #self.network_button.clicked.connect(self.set_network)
         #verify_buttons_layout.addWidget(self.network_button)
@@ -82,11 +83,11 @@ class VCLEditor(QMainWindow):
         #self.verifier_button.clicked.connect(self.set_verifier)
         #verify_buttons_layout.addWidget(self.verifier_button)
         
-        #self.verify_button = QPushButton("Verify")
-        #self.verify_button.clicked.connect(self.verify_spec)
-        #verify_buttons_layout.addWidget(self.verify_button)
+        self.verify_button = QPushButton("Verify")
+        self.verify_button.clicked.connect(self.verify_spec)
+        verify_buttons_layout.addWidget(self.verify_button)
         
-        #toolbar_layout.addLayout(verify_buttons_layout)
+        toolbar_layout.addLayout(verify_buttons_layout)
         
         main_layout.addLayout(toolbar_layout)
         
@@ -168,8 +169,8 @@ class VCLEditor(QMainWindow):
         self.setStatusBar(self.status_bar)
         
         # Add file path display
-        #self.file_path_label = QLabel("No file opened")
-        #self.status_bar.addWidget(self.file_path_label, 1)
+        self.file_path_label = QLabel("No file opened")
+        self.status_bar.addWidget(self.file_path_label, 1)
         
         # Add network and verifier path display
         #self.network_label = QLabel("Network not set")
@@ -259,24 +260,27 @@ class VCLEditor(QMainWindow):
             self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
     
     def verify_spec(self):
+
+
         """Verify the specification"""
-        if not self.save_before_operation():
-            return
+        #if not self.save_before_operation():
+        #    return
+        self.save_file()
+
+        #if not self.network_path:
+        #    QMessageBox.warning(self, "Verification Error", "Please set the network file first")
+        #    return
         
-        if not self.network_path:
-            QMessageBox.warning(self, "Verification Error", "Please set the network file first")
-            return
-        
-        if not self.verifier_path:
-            QMessageBox.warning(self, "Verification Error", "Please set the verifier path first")
-            return
+        #if not self.verifier_path:
+        #    QMessageBox.warning(self, "Verification Error", "Please set the verifier path first")
+        #    return
         
         self.status_bar.showMessage("Verifying...", 0)
         self.verify_button.setEnabled(False)
         
         # Execute verification
         try:
-            result = 0 #VCLBindings.verify(self.vcl_path, self.network_path, self.verifier_path)
+            result = verify(self.vcl_path)    #self.network_path, self.verifier_path)
             
             # Display results
             self.output.clear()
