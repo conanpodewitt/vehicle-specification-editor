@@ -1,0 +1,12 @@
+{
+  "property_name": string,
+  "num_queries": number,
+  "query_index": number,
+  "progress": number
+}
+{
+  "counterexample": {
+    "data": string,
+    "type": "list","blob","dict"
+  }
+}
