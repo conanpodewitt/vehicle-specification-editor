@@ -1,7 +1,7 @@
 {
   "property_name": string,
-  "num_queries": number,
-  "query_index": number,
+  "num_queries": integer,
+  "query_index": integer,
   "progress": number
 }
 {
