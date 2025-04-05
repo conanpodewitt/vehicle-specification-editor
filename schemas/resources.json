@@ -1,0 +1,6 @@
+{
+  "networks": [string],
+  "datasets": [string],
+  "parameters": [string],
+  "properties": [string]
+}
