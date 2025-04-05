@@ -1,15 +1,15 @@
 {
-  file: string,
-  errors: [
+  "file": string,
+  "errors": [
     {
-      start: number,
-      end: number,
-      message: string
+      "start": number,
+      "end": number,
+      "message": string
     },
     {
-      start: number,
-      end: number,
-      message: string
+      "start": number,
+      "end": number,
+      "message": string
     },
   ]
 }
