@@ -2,13 +2,13 @@
   "file": string,
   "errors": [
     {
-      "start": number,
-      "end": number,
+      "start": integer,
+      "end": integer,
       "message": string
     },
     {
-      "start": number,
-      "end": number,
+      "start": integer,
+      "end": integer,
       "message": string
     },
   ]
