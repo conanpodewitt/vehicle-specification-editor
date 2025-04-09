@@ -1,138 +1,110 @@
-#!/usr/bin/env python3
+from vehicle_lang.ast import *
 
 import json
+import os
 import sys
 import argparse
 from typing import List, Dict, Any, Optional
 
 
-def extract_networks_from_ast(ast_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-	"""
-	Extract network information from an AST JSON representation.
-	
-	The AST follows a specific pattern where networks are defined as function parameters:
-	
-	Main
-	└── DefFunction
-		├── Provenance
-		├── FunctionName
-		├── Type (Pi type)
-		└── Lam (lambda definition)
-			└── Binder
-				├── Provenance
-				├── NetworkName
-				└── NetworkType
-	
-	Args:
-		ast_data: The AST data as a dictionary
-		
-	Returns:
-		A list of dictionaries containing information about each network found in the AST
-	"""
-	networks = []
-	
-	# Early return if not a Main node
-	if ast_data.get("tag") != "Main":
-		return networks
-	
-	# Process each function definition
-	for item in ast_data.get("contents", []):
-		if item.get("tag") != "DefFunction":
-			continue
+def parse_node(node, elements_found, property_name) -> None:
+    if isinstance(node, Lam):
+        binder = node.binder
 
-		network_info = extract_network_from_function(item)
+        # Extract information from the binder
+        item_name: Optional[Name] = binder.name
+        item_cls: Union[Expression, BuiltinType] = binder.type
 
-		if network_info:
-			networks.append(network_info)
+        # Only process if the binder has a name
+        if item_name:
+            element_info = {
+                "name": item_name,
+                "type_name": item_cls.__class__.__name__,
+                "property_name": property_name,
+            }
+			
+            if type(item_cls) == Pi:
+                element_info["element_type"] = "network"
+            elif type(item_cls) == TensorType:
+                element_info["element_type"] = "parameter"
+            #### NEED TO ADD DATASET TYPE HERE
+			
+            elements_found[item_name] = element_info
+			
+        lam_function = node.body
+        parse_node(lam_function, elements_found, property_name)
+    
+    elif isinstance(node, BuiltinFunction):
+        if type(node.body) == list:
+            for arg in node.body:
+                parse_node(arg, elements_found, property_name)
+        else:
+            parse_node(node.body, elements_found, property_name)
+			
 	
-	return networks
+def extract_elements(ast: Program) -> List[Dict[str, Any]]:
+    """
+    Extract network, dataset, and parameter information from a Vehicle AST Program object.
 
+    Identifies elements based on the pattern: A DefFunction where the
+    body is a Lam, taking the Lam's binder as the network definition.
 
-def extract_network_from_function(function_node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-	"""Extract network information from a function definition node."""
-	function_contents = function_node.get("contents", [])
+    Args:
+        ast: The parsed Program AST object.
 
-	if len(function_contents) < 4:
-		return None
-	
-	# Define the network
-	network_info = {}
-	
-	# Extract function node
-	function_name = function_contents[1]
-	network_info["function_name"] = function_name
-	
-	# Extract lambda node
-	lambda_node_index = 3
-	if lambda_node_index >= len(function_contents):
-		return None
-	lambda_node = function_contents[lambda_node_index]
-	
-	extract_network_from_lambda(lambda_node, network_info)
-	return network_info
+    Returns:
+        A dictionary containing the extracted elements, where each key is the
+        element name and the value is a dictionary containing information about the element.
+    """
+    elements_found: Dict[str, Any] = {}
+
+    # Ensure the root is a Main program node
+    if not isinstance(ast, Main):
+        print("Warning: AST root is not Main node.", file=sys.stderr)
+        return elements_found
+
+    # Iterate through top-level declarations
+    for declaration in ast.declarations:
+        if isinstance(declaration, DefFunction):
+            parse_node(declaration.body, elements_found, declaration.name)
+
+    return elements_found
 
 
-def extract_network_from_lambda(lambda_node: Dict[str, Any], network_info: Dict[str, Any]):
-	"""Extract network information from a lambda definition node."""
-	if lambda_node.get("tag") != "Lam":
-		return None
-	
-	lambda_contents = lambda_node.get("contents", [])
-	if len(lambda_contents) < 1:
-		return None
-	
-	# Extract binder node
-	binder_node = lambda_contents[0]
-
-	extract_network_from_binder(binder_node, network_info)
-
-
-def extract_network_from_binder(binder_node: Dict[str, Any], network_info: Dict[str, Any]):
-	"""Extract network information from a binder node."""
-	if binder_node.get("tag") != "Binder":
-		return None
-	
-	binder_contents = binder_node.get("contents", [])
-	if len(binder_contents) < 3:
-		return None
-	
-	# Extract network name and signature
-	network_name = binder_contents[1]
-	network_info["name"] = network_name
-	contents = binder_contents[2]["contents"]
-	network_info["signature"] = {"input": contents[0], "output": contents[1]}
+file_path = os.path.dirname(os.path.abspath(__file__))
+spec_path = os.path.join(file_path, "golden_spec.json")
 
 
 def main():
 	parser = argparse.ArgumentParser(description='Extract network definitions from Vehicle AST JSON')
-	parser.add_argument('ast_file', help='Path to the AST JSON file')
-	parser.add_argument('--format', choices=['json', 'minimal'], default='minimal',
+	parser.add_argument('--ast_file', default=spec_path, help='Path to the AST JSON file')
+	parser.add_argument('--format', choices=['json', 'minimal'], default='json',
 					  help='Output format (json, or minimal)')
 	parser.add_argument('--names-only', action='store_true', help='Only output network names')
 	args = parser.parse_args()
 	
 	try:
 		with open(args.ast_file, 'r') as f:
-			ast_data = json.load(f)
+			ast = Program.from_json(f.read())
+        
+		elements = extract_elements(ast)
 		
-		networks = extract_networks_from_ast(ast_data)
-		
-		if not networks:
-			print("No networks found in the AST.")
+		if not elements:
+			print("No elements found in the AST.")
 			return
 		
 		# Handle different output formats
 		if args.names_only:
-			for network in networks:
+			for network in elements:
 				print(network['name'])
 				
 		elif args.format == 'json':
-			print(json.dumps(networks, indent=2))
+			print(json.dumps(elements, indent=2))
 
 		elif args.format == 'minimal':
-			for network in networks:
+			for network in elements:
 				name = network['name']
-				defined_in = network['function_name']
+				defined_in = network['property_name']
 				print(f"{name} (defined in {defined_in})")
 	
 	except FileNotFoundError:
