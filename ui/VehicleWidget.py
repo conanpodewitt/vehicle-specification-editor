@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
 from ui.CodeEditor import CodeEditor
-from vehicle_lang import verify
+from vehicle_lang import verify, VERSION
 
 class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""
@@ -86,7 +86,11 @@ class VCLEditor(QMainWindow):
         self.verify_button = QPushButton("Verify")
         self.verify_button.clicked.connect(self.verify_spec)
         verify_buttons_layout.addWidget(self.verify_button)
-        
+        toolbar_layout.addLayout(verify_buttons_layout)
+
+        self.version_button = QPushButton("Version")
+        self.version_button.clicked.connect(self.show_version)
+        verify_buttons_layout.addWidget(self.version_button)
         toolbar_layout.addLayout(verify_buttons_layout)
         
         main_layout.addLayout(toolbar_layout)
@@ -324,3 +328,8 @@ class VCLEditor(QMainWindow):
             file.write(self.editor.toPlainText())
         
         return True
+
+    def show_version(self):
+        """Show the current version of the application"""
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Version", f"Current version: {VERSION}")
