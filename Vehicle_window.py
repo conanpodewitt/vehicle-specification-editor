@@ -13,6 +13,7 @@ from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
 from ui.VehicleWidget import VCLEditor
 import ui.CodeEditor
+
 #import vehicle_lang as vcl--
 
 TEMP_DIR = os.path.join(os.path.dirname(__file__), 'temp')
