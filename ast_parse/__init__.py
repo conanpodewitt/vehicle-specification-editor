@@ -13,7 +13,7 @@ def parse_node(node, elements_found, property_name) -> None:
 
         # Extract information from the binder
         item_name: Optional[Name] = binder.name
-        item_cls: Union[Expression, BuiltinType] = binder.type
+        item_cls: Expression = binder.type
 
         # Only process if the binder has a name
         if item_name:
@@ -34,12 +34,14 @@ def parse_node(node, elements_found, property_name) -> None:
         lam_function = node.body
         parse_node(lam_function, elements_found, property_name)
     
-    elif isinstance(node, BuiltinFunction):
-        if type(node.body) == list:
-            for arg in node.body:
-                parse_node(arg, elements_found, property_name)
-        else:
-            parse_node(node.body, elements_found, property_name)
+    elif isinstance(node, AST):
+        fields = vars(node).values()
+        for field in fields:
+            if isinstance(field, list):
+                for item in field:
+                    parse_node(item, elements_found, property_name)
+            elif isinstance(field, AST):
+                parse_node(field, elements_found, property_name)
 			
 	
 def extract_elements(ast: Program) -> List[Dict[str, Any]]:
