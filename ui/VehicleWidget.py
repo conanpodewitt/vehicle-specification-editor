@@ -3,7 +3,7 @@ import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
                            QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
-                           QComboBox, QPlainTextEdit)
+                           QComboBox, QPlainTextEdit, QScrollArea, QSizePolicy)
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
 from ui.CodeEditor import CodeEditor
@@ -19,6 +19,7 @@ class VCLEditor(QMainWindow):
         self.vcl_path = None
         self.network_path = None
         self.verifier_path = None
+        self.resource_boxes = []
         
         # Set window properties
         self.setWindowTitle("Vehicle Editor")
@@ -63,10 +64,10 @@ class VCLEditor(QMainWindow):
         toolbar_layout.addStretch(1)
         
         # Compile buttons
-        #compile_buttons_layout = QHBoxLayout()
-        #self.compile_button = QPushButton("Compile")
-        #self.compile_button.clicked.connect(self.compile_spec)
-        #compile_buttons_layout.addWidget(self.compile_button)
+        compile_buttons_layout = QHBoxLayout()
+        self.compile_button = QPushButton("Compile")
+        self.compile_button.clicked.connect(self.generate_resource_boxes)
+        compile_buttons_layout.addWidget(self.compile_button)
         
         #toolbar_layout.addLayout(compile_buttons_layout)
         
@@ -152,16 +153,32 @@ class VCLEditor(QMainWindow):
         right_label = QLabel("Additonal Inputs")
         right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_layout.addWidget(right_label)
+
+        # Create scroll area for resource boxes
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+
+        # Create a widget to hold the resource boxes
+        scroll_content = QWidget()
+        self.resource_layout = QVBoxLayout(scroll_content)
+        scroll_content.setLayout(self.resource_layout)
+        scroll_area.setWidget(scroll_content)
         
         # Use regular QTextEdit for the output area
-        self.output = QTextEdit()
-        self.output.setFont(QFont("Consolas", 11))
-        self.output.setReadOnly(True)
-        self.output.setPlaceholderText("....")
+        self.output_box = QTextEdit()
+        self.output_box.setFont(QFont("Consolas", 11))
+        self.output_box.setReadOnly(True)
+        self.output_box.setPlaceholderText("....")
+
+        # Set size policy for scroll area and output box
+        scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.output_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        scroll_area.setMinimumWidth(200)
         
-        right_layout.addWidget(self.output)
+        right_layout.addWidget(scroll_area)
+        right_layout.addWidget(self.output_box)
+
         main_edit_layout.addLayout(right_layout, 2)  # Right side takes 2/5
-        
         main_layout.addLayout(main_edit_layout)
         
         # Create status bar
@@ -182,7 +199,7 @@ class VCLEditor(QMainWindow):
     def new_file(self):
         """Create a new file"""
         self.editor.clear()
-        self.output.clear()
+        self.output_box.clear()
         self.vcl_path = None
         self.file_path_label.setText("No file opened")
         self.status_bar.showMessage("New file created", 3000)
@@ -317,10 +334,26 @@ class VCLEditor(QMainWindow):
         # Save file to ensure using the latest content
         with open(self.vcl_path, 'w') as file:
             file.write(self.editor.toPlainText())
-        
-        return True
 
-        with open(self.vcl_path, 'w') as file:
-            file.write(self.editor.toPlainText())
-        
-        return True
+    def generate_resource_boxes(self):
+        example_schema = [
+            {"name": "ImageNet", "type": "network"},
+            {"name": "MNIST", "type": "dataset"},
+            {"name": "Stride", "type": "parameter"},
+            {"name": "Stride", "type": "parameter"},
+            {"name": "Stride", "type": "parameter"},
+        ]
+
+        # Clear old boxes
+        for box in self.resource_boxes:
+            box.deleteLater()
+
+        self.resource_boxes.clear()
+
+        # Add new boxes from example json
+        for entry in example_schema:
+            name = entry.get("name")
+            type_ = entry.get("type")
+            box = CurvedBox(name, type_)
+            self.resource_layout.addWidget(box)
+            self.resource_boxes.append(box)
