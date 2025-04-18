@@ -4,6 +4,11 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QComboBox, QPlainTextEdit)
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
+#from pygments import PythonLexer
+from pygments.lexers import get_lexer_by_name
+from pygments.lexers import *
+import pygments
+from superqt.utils import CodeSyntaxHighlight
 
 
 class VCLSyntaxHighlighter(QSyntaxHighlighter):
@@ -14,8 +19,13 @@ class VCLSyntaxHighlighter(QSyntaxHighlighter):
         
         # Create highlight formats
         self.formats = {}
+
+        lexer = get_lexer_by_name("external")
+        tokens = lexer.get_tokens_unprocessed()
+        pygments.lex(lexer)
         
-        # Keyword format _/
+        #tokens = lexer.get_tokens("string", False)
+        # Keyword format _
         keyword_format = QTextCharFormat()
         keyword_format.setForeground(QColor("#569CD6"))
         keyword_format.setFontWeight(QFont.Weight.Bold)
