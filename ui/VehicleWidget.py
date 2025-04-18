@@ -331,10 +331,6 @@ class VCLEditor(QMainWindow):
             box = CurvedBox(name, type_)
             self.resource_layout.addWidget(box)
             self.resource_boxes.append(box)
-        with open(self.vcl_path, 'w') as file:
-            file.write(self.editor.toPlainText())
-        
-        return True
 
     def show_version(self):
         """Show the current version of the application"""
