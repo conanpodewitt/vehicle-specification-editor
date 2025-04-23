@@ -29,7 +29,9 @@ def main():
     editor = VCLEditor()
     editor.show()
     
+    
     sys.exit(app.exec())
+
 
 
 if __name__ == "__main__":

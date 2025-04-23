@@ -1,11 +1,11 @@
-
+import json
 import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
                            QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
                            QComboBox, QPlainTextEdit, QScrollArea, QSizePolicy)
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
+from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat, QAction
 from ui.CodeEditor import CodeEditor
 from vehicle_lang import verify
 
@@ -31,8 +31,12 @@ class VCLEditor(QMainWindow):
         self.setWindowTitle("Vehicle Editor")
         self.setGeometry(100, 100, 1200, 800)
         
+        
         # Create main window widgets
         self.init_ui()
+
+        self.menu_bar = self.menuBar()
+        self.initMenu()
     
     def init_ui(self):
         """Initialize UI"""
@@ -166,6 +170,46 @@ class VCLEditor(QMainWindow):
         #self.verifier_label = QLabel("Verifier not set")
         #self.status_bar.addPermanentWidget(self.verifier_label)
     
+    def initMenu(self):
+        
+        #top = ["File", "Edit", "View", "Help"]
+        #items = {"File":["New", "Open", "Save" "Save As ..."], "Edit":[""], "View":[""], "Help":[""]}
+
+
+        actions = dict()
+        with open("ui/config/menu.json") as json_menu:
+            top = json.loads(json_menu.read())
+
+            for item, action in top.items():
+                entry = self.menu_bar.addMenu(f'&{item}')
+
+                # Read action properties
+                for a, v in action.items():
+                    action_item = QAction(a, self)
+
+                    if 'Shortcut' in v.keys():
+                        action_item.setShortcut(v['Shortcut'])
+                    if v['checkable'] == 'True':
+                        action_item.setCheckable(True)
+                        action_item.setChecked(True)
+
+                    # Populate dict
+                    entry.addAction(action_item)
+                    actions[f'{item}:{a}'] = action_item
+
+        if actions:
+            # FILE submenu triggers connections
+            actions['File:New...'].triggered.connect(self.new_file)
+            actions['File:Open...'].triggered.connect(self.open_file)
+            actions['File:Save'].triggered.connect(self.save_file)
+
+            # EDIT 
+ 
+            # VIEW 
+      
+            # HELP
+        
+
     def new_file(self):
         """Create a new file"""
         self.editor.clear()

@@ -1,0 +1,19 @@
+{
+    "File": {
+      "New...": {
+        "Shortcut": "Ctrl+N",
+        "checkable": "False"
+      },
+      "Open...": {
+        "Shortcut": "Ctrl+O",
+        "checkable": "False"
+      },
+      "Save": {
+        "Shortcut": "Ctrl+S",
+        "checkable": "False"
+      }
+    },
+    "Edit": {},
+    "View": {},
+    "Help": {}
+  }
