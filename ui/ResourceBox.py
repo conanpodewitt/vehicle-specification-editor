@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-class CurvedBox(QFrame):
+class ResourceBox(QFrame):
     def __init__(self, name, type_):
         super().__init__()
         self.setObjectName("ResourceBox")

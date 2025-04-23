@@ -4,9 +4,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
                            QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
                            QComboBox, QPlainTextEdit, QScrollArea, QSizePolicy)
-from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 from ui.CodeEditor import CodeEditor
+from ui.ResourceBox import ResourceBox
 from vehicle_lang import verify, VERSION
 
 #from pygments.lexers import get_lexer_by_name
@@ -328,7 +329,7 @@ class VCLEditor(QMainWindow):
         for entry in example_schema:
             name = entry.get("name")
             type_ = entry.get("type")
-            box = CurvedBox(name, type_)
+            box = ResourceBox(name, type_)
             self.resource_layout.addWidget(box)
             self.resource_boxes.append(box)
 
