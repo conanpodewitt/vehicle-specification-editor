@@ -9,6 +9,12 @@ from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTex
 from ui.CodeEditor import CodeEditor
 from vehicle_lang import verify
 
+#from pygments.lexers import get_lexer_by_name
+#from pygments import highlight
+#from pygments.formatters import NullFormatter
+
+from superqt.utils import CodeSyntaxHighlight
+
 class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""
     
@@ -105,45 +111,9 @@ class VCLEditor(QMainWindow):
         self.editor = CodeEditor()
         self.editor.setFont(QFont("Consolas", 11))
         self.editor.setPlaceholderText("Enter your Vehicle specification here...")
-        placeholder = """--------------------------------------------------------------------------------
-                        -- Inputs and outputs
-
-                        type InputVector = Tensor Rat [2]
-
-                        currentSensor  = 0
-                        previousSensor = 1
-
-                        type OutputVector = Tensor Rat [1]
-
-                        velocity = 0
-
-                        --------------------------------------------------------------------------------
-                        -- Network
-
-                        @network
-                        controller : InputVector -> OutputVector
-
-                        -- Normalises the input values from the range [-4, 4] metres to the range [0,1]
-                        normalise : InputVector -> InputVector
-                        normalise x = foreach i . (x ! i + 4.0) / 8.0
-
-                        --------------------------------------------------------------------------------
-                        -- Safety property
-
-                        safeInput : InputVector -> Bool
-                        safeInput x = forall i . -3.25 <= x ! i <= 3.25
-
-                        safeOutput : InputVector -> Bool
-                        safeOutput x = let y = controller (normalise x) ! velocity in
-                        -1.25 < y + 2 * (x ! currentSensor) - (x ! previousSensor) < 1.25
-
-                        @property
-                        safe : Bool
-                        safe = forall x . safeInput x => safeOutput x"""
-        self.editor.setPlainText(placeholder)
         
         # Add syntax highlighting
-        #self.highlighter = VCLSyntaxHighlighter(self.editor.document())
+        self.highlighter = CodeSyntaxHighlight(self.editor.document(), "external", "vs")
         
         left_layout.addWidget(self.editor)
         main_edit_layout.addLayout(left_layout, 3)  # Left side takes 3/5
