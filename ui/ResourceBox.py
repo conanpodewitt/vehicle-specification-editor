@@ -1,38 +1,96 @@
+import os
 import sys
 import json
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame
+    QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
 )
 
 
-class CurvedBox(QFrame):
-    def __init__(self, name, type_):
+class ResourceBox(QFrame):
+    def __init__(self, name, type_, data_type=None):
         super().__init__()
         self.setObjectName("ResourceBox")
         layout = QVBoxLayout()
         title = QLabel(f"{type_.capitalize()}: {name}")
         title.setFont(QFont("Consolas", 11, weight=QFont.Weight.Bold))
         layout.addWidget(title)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.is_loaded = False
+        self.type = type_
+        self.name = name
 
         if type_ == "network":
-            view_btn = QPushButton("View Network")
-            load_btn = QPushButton("Load Network")
-            view_btn.clicked.connect(lambda: print(f"Viewing network: {name}"))
-            load_btn.clicked.connect(lambda: print(f"Loading network: {name}"))
-            layout.addWidget(view_btn)
-            layout.addWidget(load_btn)
+            self.view_btn = QPushButton("View Network")
+            self.load_btn = QPushButton("Load Network")
+            self.view_btn.clicked.connect(lambda: print(f"Viewing network: {name}"))
+            self.load_btn.clicked.connect(self.set_path)
+            layout.addWidget(self.view_btn)
+            layout.addWidget(self.load_btn)
 
         elif type_ == "dataset":
-            load_path_btn = QPushButton("Load Dataset")
-            load_path_btn.clicked.connect(lambda: print(f"Loading dataset: {name}"))
-            layout.addWidget(load_path_btn)
+            self.load_btn = QPushButton("Load Dataset")
+            self.load_btn.clicked.connect(self.set_path)
+            layout.addWidget(self.load_btn)
 
         elif type_ == "parameter":
-            input_box = QLineEdit()
-            input_box.setPlaceholderText("Enter value")
-            input_box.textChanged.connect(lambda val: print(f"Parameter {name} set to: {val}"))
-            layout.addWidget(input_box)
+            if data_type is None:
+                raise ValueError("Data type must be specified for parameters.")
+
+            self.input_box = QLineEdit()
+            self.input_box.editingFinished.connect(self.set_value)
+            layout.addWidget(self.input_box)
+
+            # Add a label to show the data type
+            self.data_type_label = QLabel(f"Data Type: {data_type}")
+            self.data_type_label.setFont(QFont("Consolas", 10))
+            self.data_type_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+            layout.addWidget(self.data_type_label)
+
+            self.input_box.setPlaceholderText(f"Enter {self.data_type} value")
+            self.data_type = data_type
 
         self.setLayout(layout)
+
+    
+    def set_path(self):
+        """Open a network path"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open Vehicle Specification", "", "ONNX Files (*.onnx);;All Files (*)"
+        )
+        if not file_path:
+            return
+
+        self.path = file_path
+        self.load_btn.setText(f"Loaded: {os.path.basename(file_path)}")
+        self.is_loaded = True
+
+    
+    def set_value(self, value):
+        """Set the value of the parameter"""
+        if self.data_type == "Rat":
+            try:
+                value = float(value)
+            except ValueError:
+                QMessageBox.critical(self, "Invalid Value", "Value must be a number.")
+                return
+        elif self.data_type == "Nat":
+            try:
+                value = int(value)
+            except ValueError:
+                QMessageBox.critical(self, "Invalid Value", "Value must be a natural number.")
+                return
+        elif self.data_type == "Bool":
+            if value.lower() not in ["true", "false"]:
+                QMessageBox.critical(self, "Invalid Value", "Value must be 'true' or 'false'.")
+                return
+            value = value.lower() == "true"
+        else:
+            raise ValueError(f"Unexpected data type: {self.data_type}")
+            
+        self.input_box.setText(str(value))
+        self.is_loaded = True
+        
+        

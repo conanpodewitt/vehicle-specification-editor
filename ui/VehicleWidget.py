@@ -1,19 +1,24 @@
 
 import os
+import traceback
+
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
                            QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
                            QComboBox, QPlainTextEdit, QScrollArea, QSizePolicy)
-from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 from ui.CodeEditor import CodeEditor
-from vehicle_lang import verify
+from ui.ResourceBox import ResourceBox
+from ui.VCLBindings import VCLBindings
+from vehicle_lang import verify, VERSION
 
-#from pygments.lexers import get_lexer_by_name
-#from pygments import highlight
-#from pygments.formatters import NullFormatter
+from pygments.lexers import get_lexer_by_name
+from pygments import highlight
+from pygments.formatters import NullFormatter
 
 from superqt.utils import CodeSyntaxHighlight
+
 
 class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""
@@ -22,10 +27,9 @@ class VCLEditor(QMainWindow):
         super().__init__()
         
         # Initialize paths
-        self.vcl_path = None
-        self.network_path = None
-        self.verifier_path = None
         self.resource_boxes = []
+        self.vcl_bindings = VCLBindings()
+        self.vcl_path = None
         
         # Set window properties
         self.setWindowTitle("Vehicle Editor")
@@ -34,69 +38,53 @@ class VCLEditor(QMainWindow):
         # Create main window widgets
         self.init_ui()
     
+
     def init_ui(self):
         """Initialize UI"""
         # Create main window widget
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
-
-        # Style - CocoNet
-        #with open(RES_DIR + '/styling/qss/style.qss') as qss_file:
-        #    self.setStyleSheet(qss_file.read())
-        #    main_widget.setStyleSheet(qss_file.read())
-        #    self.setStyleSheet(qss_file.read())
         
         # Create top toolbar
-        toolbar_layout = QHBoxLayout()
+        top_toolbar = QHBoxLayout()
         
-        # File operation buttons
-        #file_buttons_layout = QHBoxLayout()
-        #self.new_button = QPushButton("New")
-        #self.new_button.clicked.connect(self.new_file)
-        #file_buttons_layout.addWidget(self.new_button)
+        # New, Open, Save buttons for VCL files
+        file_buttons_layout = QHBoxLayout()
+        new_button = QPushButton("New")
+        new_button.clicked.connect(self.new_file)
+        file_buttons_layout.addWidget(new_button)
         
-        #self.open_button = QPushButton("Open")
-        #self.open_button.clicked.connect(self.open_file)
-        #file_buttons_layout.addWidget(self.open_button)
+        open_button = QPushButton("Open")
+        open_button.clicked.connect(self.open_file)
+        file_buttons_layout.addWidget(open_button)
         
-        #self.save_button = QPushButton("Save")
-        #self.save_button.clicked.connect(self.save_file)
-        #file_buttons_layout.addWidget(self.save_button)
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_file)
+        file_buttons_layout.addWidget(save_button)
         
-        #toolbar_layout.addLayout(file_buttons_layout)
+        top_toolbar.addLayout(file_buttons_layout)
+        top_toolbar.addStretch(1)
+
+        # Add set verifier button
+        verifier_button = QPushButton("Set Verifier")
+        verifier_button.clicked.connect(self.set_verifier)
+        top_toolbar.addWidget(verifier_button)
+        top_toolbar.addStretch(1)
         
-        # Add spacing
-        toolbar_layout.addStretch(1)
-        
-        # Compile buttons
-        compile_buttons_layout = QHBoxLayout()
+        # Add compile and verify buttons
+        output_layout = QHBoxLayout()
         self.compile_button = QPushButton("Compile")
-        self.compile_button.clicked.connect(self.generate_resource_boxes)
-        compile_buttons_layout.addWidget(self.compile_button)
-        
-        #toolbar_layout.addLayout(compile_buttons_layout)
-        
-        # Add spacing
-        #toolbar_layout.addStretch(1)
-        
-        # Verification buttons
-        verify_buttons_layout = QHBoxLayout()
-        #self.network_button = QPushButton("Set Network")
-        #self.network_button.clicked.connect(self.set_network)
-        #verify_buttons_layout.addWidget(self.network_button)
-        
-        #self.verifier_button = QPushButton("Set Verifier")
-        #self.verifier_button.clicked.connect(self.set_verifier)
-        #verify_buttons_layout.addWidget(self.verifier_button)
-        
+        self.compile_button.clicked.connect(self.compile_spec)
+        output_layout.addWidget(self.compile_button)
+
         self.verify_button = QPushButton("Verify")
         self.verify_button.clicked.connect(self.verify_spec)
-        verify_buttons_layout.addWidget(self.verify_button)
+        output_layout.addWidget(self.verify_button)
         
-        toolbar_layout.addLayout(verify_buttons_layout)
-        
-        main_layout.addLayout(toolbar_layout)
+        top_toolbar.addLayout(output_layout)
+        top_toolbar.addStretch(1)
+        main_layout.addLayout(top_toolbar)
         
         # Create main edit area
         main_edit_layout = QHBoxLayout()
@@ -128,9 +116,14 @@ class VCLEditor(QMainWindow):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
 
+        # Only show vertical scrollbar when needed
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         # Create a widget to hold the resource boxes
         scroll_content = QWidget()
         self.resource_layout = QVBoxLayout(scroll_content)
+        self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll_content.setLayout(self.resource_layout)
         scroll_area.setWidget(scroll_content)
         
@@ -159,137 +152,123 @@ class VCLEditor(QMainWindow):
         self.file_path_label = QLabel("No file opened")
         self.status_bar.addWidget(self.file_path_label, 1)
         
-        # Add network and verifier path display
-        #self.network_label = QLabel("Network not set")
-        #self.status_bar.addPermanentWidget(self.network_label)
-        
-        #self.verifier_label = QLabel("Verifier not set")
-        #self.status_bar.addPermanentWidget(self.verifier_label)
+        self.verifier_label = QLabel("Verifier not set")
+        self.status_bar.addPermanentWidget(self.verifier_label)
+
+        # Create bottom toolbar
+        bottom_layout = QHBoxLayout()
+        version_button = QPushButton("Version")
+        version_button.clicked.connect(self.show_version)
+        bottom_layout.addWidget(version_button)
+        bottom_layout.addStretch(1)
+
+        main_layout.addLayout(bottom_layout)
+
     
     def new_file(self):
         """Create a new file"""
         self.editor.clear()
         self.output_box.clear()
-        self.vcl_path = None
         self.file_path_label.setText("No file opened")
         self.status_bar.showMessage("New file created", 3000)
+
+        self.vcl_path = None
+        self.vcl_bindings.clear()
     
+
     def open_file(self):
         """Open an existing file"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open Vehicle Specification", "", "VCL Files (*.vcl);;All Files (*)"
         )
-        
-        if file_path:
-            try:
-                with open(file_path, 'r') as file:
-                    self.editor.setPlainText(file.read())
-                self.vcl_path = file_path
-                self.file_path_label.setText(f"File: {os.path.basename(file_path)}")
-                self.status_bar.showMessage(f"Opened: {file_path}", 3000)
-            except Exception as e:
-                QMessageBox.critical(self, "File Open Error", f"Could not open file: {str(e)}")
+        if not file_path:
+            return
+
+        with open(file_path, 'r') as file:
+            self.editor.setPlainText(file.read())
+        self.status_bar.showMessage(f"Opened: {file_path}", 3000)
+        self.set_vcl_path(file_path)
+
     
     def save_file(self):
         """Save the current file"""
-        if not self.vcl_path:
+        file_path = self.vcl_path
+
+        if not file_path:
             file_path, _ = QFileDialog.getSaveFileName(
                 self, "Save Vehicle Specification", "", "VCL Files (*.vcl);;All Files (*)"
             )
             if not file_path:
                 return
-            self.vcl_path = file_path
         
-        try:
-            with open(self.vcl_path, 'w') as file:
-                file.write(self.editor.toPlainText())
-            self.file_path_label.setText(f"File: {os.path.basename(self.vcl_path)}")
-            self.status_bar.showMessage(f"Saved: {self.vcl_path}", 3000)
-        except Exception as e:
-            QMessageBox.critical(self, "File Save Error", f"Could not save file: {str(e)}")
-    
-    def compile_spec(self):
-        """Compile the specification"""
-        if not self.save_before_operation():
-            return
+        with open(self.vcl_path, 'w') as file:
+            file.write(self.editor.toPlainText())
+        self.status_bar.showMessage(f"Saved: {self.vcl_path}", 3000)
+        self.set_vcl_path(file_path)
+
         
-        self.status_bar.showMessage("Compiling...", 1000)
-        result = 0 #VCLBindings.compile(self.vcl_path)
-        
-        self.output.clear()
-        self.output.setPlainText(result)
-        
-        if "Error" in result or "error" in result:
-            self.status_bar.showMessage("Compilation failed", 3000)
-        else:
-            self.status_bar.showMessage("Compilation successful", 3000)
-    
-    def set_network(self):
-        """Set the network file"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Select Network File", "", "ONNX Files (*.onnx);;All Files (*)"
-        )
-        
-        if file_path:
-            self.network_path = file_path
-            self.network_label.setText(f"Network: {os.path.basename(file_path)}")
-            self.status_bar.showMessage(f"Network set: {file_path}", 3000)
-    
     def set_verifier(self):
         """Set the verifier path"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Marabou Verifier", "", "Marabou Verifier (Marabou*);;All Files (*)"
         )
-        
-        if file_path:
-            self.verifier_path = file_path
-            self.verifier_label.setText(f"Verifier: {os.path.basename(file_path)}")
-            self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
+        if not file_path:
+            return
+
+        self.vcl_bindings.verifier_path = file_path
+        self.verifier_label.setText(f"Verifier: {os.path.basename(file_path)}")
+        self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
     
-    def verify_spec(self):
 
-
-        """Verify the specification"""
-        #if not self.save_before_operation():
-        #    return
-        self.save_file()
-
-        #if not self.network_path:
-        #    QMessageBox.warning(self, "Verification Error", "Please set the network file first")
-        #    return
+    def compile_spec(self):
+        """Compile the specification"""
+        if not self.save_before_operation():
+            return
         
-        #if not self.verifier_path:
-        #    QMessageBox.warning(self, "Verification Error", "Please set the verifier path first")
-        #    return
+        self.assign_resources()
+        if not all(box.is_loaded for box in self.resource_boxes):
+            QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
+            return
+        
+        self.status_bar.showMessage("Compiling...", 1000)
+        self.compile_button.setEnabled(False)
+
+        # Execute compilation
+        result = self.vcl_bindings.compile()
+        self.output_box.clear()
+        self.output_box.setPlainText(result)
+        self.compile_button.setEnabled(True)
+    
+
+    def verify_spec(self):
+        """Verify the specification"""
+        if not self.save_before_operation():
+           return
+        
+        if not self.vcl_bindings.verifier_path:
+           QMessageBox.warning(self, "Verification Error", "Please set the verifier path first")
+           return
+        
+        self.assign_resources()
+        if not all(box.is_loaded for box in self.resource_boxes):
+            QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
+            return
         
         self.status_bar.showMessage("Verifying...", 0)
         self.verify_button.setEnabled(False)
         
         # Execute verification
-        try:
-            result = verify(self.vcl_path)    #self.network_path, self.verifier_path)
-            
-            # Display results
-            self.output.clear()
-            self.output.setPlainText(result)
-            
-            if "Error" in result or "error" in result:
-                self.status_bar.showMessage("Verification failed", 3000)
-            else:
-                self.status_bar.showMessage("Verification successful", 3000)
-                
-        except Exception as e:
-            import traceback
-            error_msg = f"Exception during verification:\n{str(e)}\n\n{traceback.format_exc()}"
-            self.output.setPlainText(error_msg)
-            self.status_bar.showMessage("Verification error", 3000)
-        
-        finally:
-            self.verify_button.setEnabled(True)
+        result = self.vcl_bindings.verify() 
+        self.output_box.clear()
+        self.output_box.setPlainText(result)
+        self.verify_button.setEnabled(True)
     
+
     def save_before_operation(self):
         """Save file before operation"""
-        if not self.vcl_path:
+        file_saved = bool(self.vcl_path)
+
+        if not file_saved:
             reply = QMessageBox.question(
                 self, "Save File", "You need to save the file before this operation. Save now?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
@@ -297,23 +276,16 @@ class VCLEditor(QMainWindow):
             
             if reply == QMessageBox.StandardButton.Yes:
                 self.save_file()
-                return bool(self.vcl_path)
-            else:
-                return False
-        
-        # Save file to ensure using the latest content
-        with open(self.vcl_path, 'w') as file:
-            file.write(self.editor.toPlainText())
+                file_saved = bool(self.vcl_path)
+        else:
+            # Write the latest changes to the file
+            with open(self.vcl_path, 'w') as file:
+                file.write(self.editor.toPlainText())
+
+        return file_saved
+            
 
     def generate_resource_boxes(self):
-        example_schema = [
-            {"name": "ImageNet", "type": "network"},
-            {"name": "MNIST", "type": "dataset"},
-            {"name": "Stride", "type": "parameter"},
-            {"name": "Stride", "type": "parameter"},
-            {"name": "Stride", "type": "parameter"},
-        ]
-
         # Clear old boxes
         for box in self.resource_boxes:
             box.deleteLater()
@@ -321,9 +293,38 @@ class VCLEditor(QMainWindow):
         self.resource_boxes.clear()
 
         # Add new boxes from example json
-        for entry in example_schema:
+        for entry in self.vcl_bindings.resources():
             name = entry.get("name")
             type_ = entry.get("type")
-            box = CurvedBox(name, type_)
+            data_type = entry.get("data_type", None)    
+            box = ResourceBox(name, type_, data_type=data_type)
             self.resource_layout.addWidget(box)
             self.resource_boxes.append(box)
+
+    
+    def assign_resources(self):
+        """Assign resources to the VCLBindings"""
+        for box in self.resource_boxes:
+            if box.is_loaded:
+                if box.type == "network":
+                    self.vcl_bindings.set_network(box.name, box.path)
+                elif box.type == "dataset":
+                    self.vcl_bindings.set_dataset(box.name, box.path)
+                elif box.type == "parameter":
+                    self.vcl_bindings.set_property(box.name, box.value)
+            else:
+                QMessageBox.warning(self, "Resource Error", f"Resource {box.name} is not loaded")
+
+
+    def show_version(self):
+        """Show the current version of the application"""
+        QMessageBox.information(self, "Version", f"Current version: {VERSION}")
+
+    
+    def set_vcl_path(self, path):
+        """Set the VCL path"""
+        self.vcl_bindings.clear()
+        self.vcl_bindings.vcl_path = path
+        self.vcl_path = path
+        self.file_path_label.setText(f"File: {os.path.basename(path)}")
+        self.generate_resource_boxes()
