@@ -19,6 +19,7 @@ from pygments.formatters import NullFormatter
 
 from superqt.utils import CodeSyntaxHighlight
 
+
 class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""
     
@@ -27,7 +28,7 @@ class VCLEditor(QMainWindow):
         
         # Initialize paths
         self.resource_boxes = []
-        self.vcl = VCLBindings()
+        self.vcl_bindings = VCLBindings()
         self.vcl_path = None
         
         # Set window properties
@@ -115,9 +116,14 @@ class VCLEditor(QMainWindow):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
 
+        # Only show vertical scrollbar when needed
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         # Create a widget to hold the resource boxes
         scroll_content = QWidget()
         self.resource_layout = QVBoxLayout(scroll_content)
+        self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll_content.setLayout(self.resource_layout)
         scroll_area.setWidget(scroll_content)
         
@@ -167,7 +173,7 @@ class VCLEditor(QMainWindow):
         self.status_bar.showMessage("New file created", 3000)
 
         self.vcl_path = None
-        self.vcl.clear()
+        self.vcl_bindings.clear()
     
 
     def open_file(self):
@@ -178,40 +184,27 @@ class VCLEditor(QMainWindow):
         if not file_path:
             return
 
-        file_open_success = True
-
-        try:
-            with open(file_path, 'r') as file:
-                self.editor.setPlainText(file.read())
-            self.vcl_path = file_path
-            self.file_path_label.setText(f"File: {os.path.basename(file_path)}")
-            self.status_bar.showMessage(f"Opened: {file_path}", 3000)
-        except Exception as e:
-            QMessageBox.critical(self, "File Open Error", f"Could not open file: {str(e)}")
-            file_open_success = False
-
-        if file_open_success:
-            self.vcl.vcl_path = file_path
+        with open(file_path, 'r') as file:
+            self.editor.setPlainText(file.read())
+        self.status_bar.showMessage(f"Opened: {file_path}", 3000)
+        self.set_vcl_path(file_path)
 
     
     def save_file(self):
         """Save the current file"""
-        if not self.vcl_path:
+        file_path = self.vcl_path
+
+        if not file_path:
             file_path, _ = QFileDialog.getSaveFileName(
                 self, "Save Vehicle Specification", "", "VCL Files (*.vcl);;All Files (*)"
             )
             if not file_path:
                 return
-            self.vcl_path = file_path
         
-        try:
-            with open(self.vcl_path, 'w') as file:
-                file.write(self.editor.toPlainText())
-            self.file_path_label.setText(f"File: {os.path.basename(self.vcl_path)}")
-            self.status_bar.showMessage(f"Saved: {self.vcl_path}", 3000)
-
-        except Exception as e:
-            QMessageBox.critical(self, "File Save Error", f"Could not save file: {str(e)}")
+        with open(self.vcl_path, 'w') as file:
+            file.write(self.editor.toPlainText())
+        self.status_bar.showMessage(f"Saved: {self.vcl_path}", 3000)
+        self.set_vcl_path(file_path)
 
         
     def set_verifier(self):
@@ -222,7 +215,7 @@ class VCLEditor(QMainWindow):
         if not file_path:
             return
 
-        self.vcl.verifier_path = file_path
+        self.vcl_bindings.verifier_path = file_path
         self.verifier_label.setText(f"Verifier: {os.path.basename(file_path)}")
         self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
     
@@ -232,25 +225,19 @@ class VCLEditor(QMainWindow):
         if not self.save_before_operation():
             return
         
+        self.assign_resources()
+        if not all(box.is_loaded for box in self.resource_boxes):
+            QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
+            return
+        
         self.status_bar.showMessage("Compiling...", 1000)
         self.compile_button.setEnabled(False)
 
         # Execute compilation
-        try:
-            result = VCLBindings.compile()
-            self.output.clear()
-            self.output.setPlainText(result)
-
-        except Exception as e:
-            error_msg = f"Exception during verification:\n{str(e)}\n\n{traceback.format_exc()}"
-            self.output.setPlainText(error_msg)
-            self.status_bar.showMessage("Verification error", 3000)
-        
-        finally:
-            self.compile_button.setEnabled(True)
-        
-        self.output.clear()
-        self.output.setPlainText(result)
+        result = self.vcl_bindings.compile()
+        self.output_box.clear()
+        self.output_box.setPlainText(result)
+        self.compile_button.setEnabled(True)
     
 
     def verify_spec(self):
@@ -258,40 +245,30 @@ class VCLEditor(QMainWindow):
         if not self.save_before_operation():
            return
         
-        if not self.vcl.verifier_path:
+        if not self.vcl_bindings.verifier_path:
            QMessageBox.warning(self, "Verification Error", "Please set the verifier path first")
            return
         
-        if not self.are_resources_loaded():
-            QMessageBox.warning(self, "Resource Error", "Please load all required resources before verification")
+        self.assign_resources()
+        if not all(box.is_loaded for box in self.resource_boxes):
+            QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
             return
         
         self.status_bar.showMessage("Verifying...", 0)
         self.verify_button.setEnabled(False)
         
         # Execute verification
-        try:
-            result = verify(self.vcl_path)  
-            self.output.clear()
-            self.output.setPlainText(result)
-            
-            if "Error" in result or "error" in result:
-                self.status_bar.showMessage("Verification failed", 3000)
-            else:
-                self.status_bar.showMessage("Verification successful", 3000)
-                
-        except Exception as e:
-            error_msg = f"Exception during verification:\n{str(e)}\n\n{traceback.format_exc()}"
-            self.output.setPlainText(error_msg)
-            self.status_bar.showMessage("Verification error", 3000)
-        
-        finally:
-            self.verify_button.setEnabled(True)
+        result = self.vcl_bindings.verify() 
+        self.output_box.clear()
+        self.output_box.setPlainText(result)
+        self.verify_button.setEnabled(True)
     
 
     def save_before_operation(self):
         """Save file before operation"""
-        if not self.vcl_path: # TODO: Check if there are unsaved changes in the editor
+        file_saved = bool(self.vcl_path)
+
+        if not file_saved:
             reply = QMessageBox.question(
                 self, "Save File", "You need to save the file before this operation. Save now?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
@@ -299,16 +276,16 @@ class VCLEditor(QMainWindow):
             
             if reply == QMessageBox.StandardButton.Yes:
                 self.save_file()
-                return bool(self.vcl_path)
-            else:
-                return False
-        
-        # Save file to ensure using the latest content
-        with open(self.vcl_path, 'w') as file:
-            file.write(self.editor.toPlainText())
+                file_saved = bool(self.vcl_path)
+        else:
+            # Write the latest changes to the file
+            with open(self.vcl_path, 'w') as file:
+                file.write(self.editor.toPlainText())
 
+        return file_saved
+            
 
-    def generate_resource_boxes(self, resource_json):
+    def generate_resource_boxes(self):
         # Clear old boxes
         for box in self.resource_boxes:
             box.deleteLater()
@@ -316,20 +293,38 @@ class VCLEditor(QMainWindow):
         self.resource_boxes.clear()
 
         # Add new boxes from example json
-        for entry in resource_json:
+        for entry in self.vcl_bindings.resources():
             name = entry.get("name")
             type_ = entry.get("type")
-            box = ResourceBox(name, type_)
+            data_type = entry.get("data_type", None)    
+            box = ResourceBox(name, type_, data_type=data_type)
             self.resource_layout.addWidget(box)
             self.resource_boxes.append(box)
 
     
-    def are_resources_loaded(self):
-        """Check if all resources are loaded"""
-        return all(box.is_loaded for box in self.resource_boxes)
+    def assign_resources(self):
+        """Assign resources to the VCLBindings"""
+        for box in self.resource_boxes:
+            if box.is_loaded:
+                if box.type == "network":
+                    self.vcl_bindings.set_network(box.name, box.path)
+                elif box.type == "dataset":
+                    self.vcl_bindings.set_dataset(box.name, box.path)
+                elif box.type == "parameter":
+                    self.vcl_bindings.set_property(box.name, box.value)
+            else:
+                QMessageBox.warning(self, "Resource Error", f"Resource {box.name} is not loaded")
 
 
     def show_version(self):
         """Show the current version of the application"""
-        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
+
+    
+    def set_vcl_path(self, path):
+        """Set the VCL path"""
+        self.vcl_bindings.clear()
+        self.vcl_bindings.vcl_path = path
+        self.vcl_path = path
+        self.file_path_label.setText(f"File: {os.path.basename(path)}")
+        self.generate_resource_boxes()
