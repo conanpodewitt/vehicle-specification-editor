@@ -2,6 +2,32 @@ import os
 import subprocess
 
 
+def execute_vcl_command(command, *args, **kwargs):
+	"""Execute a command and return the output"""
+	cmd = ["vehicle", command]
+
+	# Add the positional arguments
+	for command_arg in args:
+		cmd.append(command_arg)
+
+	# Add the optional
+	for option, value in kwargs.items():
+		option = option.replace("_", "-")
+		cmd.append(f"--{option}")
+		cmd.append(value)
+
+	result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+	if result.returncode == 0:
+		return result.stdout
+	else:
+		error_msg = f"{command} failed (exit code {result.code}):\n\n"
+		if result.stderr:
+			error_msg += f"Error output:\n{result.stderr}\n\n"
+		if result.stdout:
+			error_msg += f"Standard output:\n{result.stdout}"
+		return error_msg
+
+
 class VCLBindings:
 	"""Python bindings for the Vehicle command-line tool"""
 
@@ -16,57 +42,44 @@ class VCLBindings:
 
 	def compile(self):
 		"""Compile a VCL specification"""
-		try:
-			# Add required --target parameter with a valid value (VehicleLoss)
-			cmd = ["vehicle", "compile", "--target", "VehicleLoss", "--specification", self._vcl_path]
-			result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-			return result.stdout
-		except subprocess.CalledProcessError as e:
-			return e.stderr
-		except Exception as e:
-			return str(e)
+		network_args = {"network": f"{name}:{path}" for name, path in self._networks.items()}
+		dataset_args = {"dataset": f"{name}:{path}" for name, path in self._datasets.items()}
+		parameter_args = {"parameter": f"{name}:{value}" for name, value in self._properties.items()}
+		# Combine all arguments
+		args = {**network_args, **dataset_args, **parameter_args}
+		return execute_vcl_command("compile", target="MarabouQueries", specification=self._vcl_path, **args)
 	
 
-	def verify(self, output_json=False):
+	def verify(self):
 		"""Verify a VCL specification"""
-		try:
-			# Directly use the filename as network name
-			filename = os.path.basename(self._vcl_path)
-			network_name = os.path.splitext(filename)[0]
+		network_args = {"network": f"{name}:{path}" for name, path in self._networks.items()}
+		dataset_args = {"dataset": f"{name}:{path}" for name, path in self._datasets.items()}
+		parameter_args = {"parameter": f"{name}:{value}" for name, value in self._properties.items()}
+		# Combine all arguments
+		args = {**network_args, **dataset_args, **parameter_args}
+		return execute_vcl_command("verify", 
+							   specification=self._vcl_path, 
+							   verifier="Marabou", 
+							   verifier_location=self._verifier_path, **args)
+		
+	
+	def resources(self):
+		"""Get the resources used by the VCLBindings"""
+		# Original form of resources: [ @network classifier Image -> Vector Rat 10 ]
+		vcl_output = execute_vcl_command("list", "resources", specification=self._vcl_path)
+		vcl_output = vcl_output.strip()[1:-1]
+		vcl_output = vcl_output.split(",")
+
+		for resource in vcl_output:
+			json_resource = {}
+			resource = resource.strip().split(" ")
+			json_resource["type"] = resource[0].lstrip("@")
+			json_resource["name"] = resource[1]
+
+			if json_resource["type"] == "parameter":
+				json_resource["data_type"] = resource[2]
 			
-			# Build command
-			cmd = ["vehicle", "verify", "--specification", self._vcl_path]
-			
-			# Add network
-			print(f"Using network argument: {self._networks}")
-			cmd.extend(["--network", self._networks])
-			
-			# Add verifier
-			cmd.extend(["--verifier", "Marabou", "--verifier-location", self._verifier_path])
-			
-			# If JSON output is needed
-			if output_json:
-				cmd.append("--json")
-			
-			# Print full command for debugging
-			print(f"Executing command: {' '.join(cmd)}")
-			
-			# Execute command
-			result = subprocess.run(cmd, capture_output=True, text=True)
-			
-			# Return result with debug info
-			if result.returncode == 0:
-				return "Verification successful:\n\n" + result.stdout
-			else:
-				error_msg = f"Verification failed (exit code {result.returncode}):\n\n"
-				if result.stderr:
-					error_msg += f"Error output:\n{result.stderr}\n\n"
-				if result.stdout:
-					error_msg += f"Standard output:\n{result.stdout}"
-				return error_msg
-		except Exception as e:
-			import traceback
-			return f"Exception during verification:\n{str(e)}\n\n{traceback.format_exc()}"
+			yield json_resource
 		
 
 	@property
