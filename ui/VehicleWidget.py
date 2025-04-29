@@ -292,11 +292,11 @@ class VCLEditor(QMainWindow):
 
         self.resource_boxes.clear()
 
-        # Add new boxes from example json
+        # Add new boxes by calling 'vehicle list resources'
         for entry in self.vcl_bindings.resources():
-            name = entry.get("name")
-            type_ = entry.get("type")
-            data_type = entry.get("data_type", None)    
+            name = entry.get("entityName")
+            type_ = entry.get("entitySort").lstrip("@")
+            data_type = entry.get("entityType", None)    
             box = ResourceBox(name, type_, data_type=data_type)
             self.resource_layout.addWidget(box)
             self.resource_boxes.append(box)
@@ -311,7 +311,7 @@ class VCLEditor(QMainWindow):
                 elif box.type == "dataset":
                     self.vcl_bindings.set_dataset(box.name, box.path)
                 elif box.type == "parameter":
-                    self.vcl_bindings.set_property(box.name, box.value)
+                    self.vcl_bindings.set_parameter(box.name, box.value)
             else:
                 QMessageBox.warning(self, "Resource Error", f"Resource {box.name} is not loaded")
 
