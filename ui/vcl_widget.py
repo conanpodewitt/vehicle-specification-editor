@@ -25,7 +25,7 @@ class VCLEditor(QMainWindow):
     
     def show_ui(self):
         """Initialize UI"""
-        # Create menu bar
+        # Create menu bar -----------------------------------------------------
         file_toolbar = QToolBar("File")
         self.addToolBar(file_toolbar)
         file_toolbar.setMovable(False)
@@ -41,7 +41,7 @@ class VCLEditor(QMainWindow):
         file_toolbar.addWidget(verifier_btn)
         self.verify_button = file_toolbar.addAction(QIcon.fromTheme("dialog-error"), "Verify", self.verify_spec)
         self.compile_button = file_toolbar.addAction(QIcon.fromTheme("media-playback-start"), "Compile", self.compile_spec)
-        # Create main window widget
+        # Create main window widget -------------------------------------------
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
@@ -99,7 +99,7 @@ class VCLEditor(QMainWindow):
         right_layout.addWidget(self.output_box)
         main_edit_layout.addLayout(right_layout, 2)  # Right side takes 2/5
         main_layout.addLayout(main_edit_layout)
-        # Status bar
+        # Status bar ----------------------------------------------------------
         self.status_bar = QStatusBar()
         font = self.status_bar.font()
         font.setPointSize(12)
@@ -112,15 +112,49 @@ class VCLEditor(QMainWindow):
         # File path display
         self.file_path_label = QLabel("No File Open")
         self.file_path_label.setContentsMargins(8, 0, 0, 0)
-        self.status_bar.addWidget(self.file_path_label, 1)
+        self.file_path_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.file_path_label.mouseReleaseEvent = lambda event: self.open_file()
+        self.status_bar.addWidget(self.file_path_label)
+        # Separator between file display and cursor position
+        sep_fd_cursor = QFrame()
+        sep_fd_cursor.setFrameShape(QFrame.Shape.VLine)
+        sep_fd_cursor.setFrameShadow(QFrame.Shadow.Sunken)
+        self.status_bar.addWidget(sep_fd_cursor)
+        # Cursor position
+        self.position_label = QLabel("Ln 1, Col 1")
+        self.position_label.setContentsMargins(5, 0, 5, 0)
+        self.status_bar.addWidget(self.position_label)
+        # Separator between cursor position and spacer
+        sep_cursor_space = QFrame()
+        sep_cursor_space.setFrameShape(QFrame.Shape.VLine)
+        sep_cursor_space.setFrameShadow(QFrame.Shadow.Sunken)
+        self.status_bar.addWidget(sep_cursor_space)
+        # Big expanding spacer
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.status_bar.addWidget(spacer)
+        # Separator before version and verifier (permanent group)
+        sep_group2 = QFrame()
+        sep_group2.setFrameShape(QFrame.Shape.VLine)
+        sep_group2.setFrameShadow(QFrame.Shadow.Sunken)
+        self.status_bar.addPermanentWidget(sep_group2)
         # Version display
         self.version_label = QLabel(f"Vehicle Version: {VERSION}")
         self.version_label.setContentsMargins(0, 0, 0, 0)
         self.status_bar.addPermanentWidget(self.version_label)
+        # Separator between version and verifier
+        sep_verifier = QFrame()
+        sep_verifier.setFrameShape(QFrame.Shape.VLine)
+        sep_verifier.setFrameShadow(QFrame.Shadow.Sunken)
+        self.status_bar.addPermanentWidget(sep_verifier)
         # Verifier display
         self.verifier_label = QLabel("No Verifier Set")
         self.verifier_label.setContentsMargins(0, 0, 10, 0)
+        self.verifier_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.verifier_label.mouseReleaseEvent = lambda event: self.set_verifier()
         self.status_bar.addPermanentWidget(self.verifier_label)
+        # Connect cursor movements to update the position indicator
+        self.editor.cursorPositionChanged.connect(self.update_cursor_position)
 
     def new_file(self):
         """Create a new file"""
@@ -259,6 +293,13 @@ class VCLEditor(QMainWindow):
         self.vcl_path = path
         self.file_path_label.setText(f"File: {os.path.basename(path)}")
         self.generate_resource_boxes()
+
+    def update_cursor_position(self):
+        """Update the status bar with current line and column."""
+        cursor = self.editor.textCursor()
+        line = cursor.blockNumber() + 1
+        col = cursor.positionInBlock() + 1
+        self.position_label.setText(f"Ln {line}, Col {col}")
 
 class backgroundworker(QRunnable):
     @pyqtSlot()
