@@ -8,6 +8,7 @@ class CodeEditor(QPlainTextEdit):
         super().__init__(parent)
         # use a fixed-width font everywhere
         mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        mono.setPointSize(14)
         self.setFont(mono)
         # Create inline line-number area
         self.line_number_area = QWidget(self)

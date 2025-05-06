@@ -18,52 +18,46 @@ class VCLEditor(QMainWindow):
         self.vcl_bindings = VCLBindings()
         self.vcl_path = None
         # Set window properties
-        self.setWindowTitle("Vehicle Editor")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setWindowTitle("Vehicle Specification Editor")
+        self.setGeometry(100, 100, 1400, 800)
         # Create main window widgets
         self.show_ui()
     
     def show_ui(self):
         """Initialize UI"""
-        # Create real file toolbar
+        # Create menu bar
         file_toolbar = QToolBar("File")
         self.addToolBar(file_toolbar)
+        file_toolbar.setMovable(False)
+        file_toolbar.setFloatable(False)
         file_toolbar.addAction(QIcon.fromTheme("document-new"),  "New",  self.new_file)
         file_toolbar.addAction(QIcon.fromTheme("document-open"), "Open", self.open_file)
         file_toolbar.addAction(QIcon.fromTheme("document-save"), "Save", self.save_file)
-        # Add spacer to push compile/verify to the right
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         file_toolbar.addWidget(spacer)
-        # Add compile/verify as icon actions
-        self.compile_button = file_toolbar.addAction(
-            QIcon.fromTheme("media-playback-start"), "Compile", self.compile_spec
-        )
-        self.verify_button = file_toolbar.addAction(
-            QIcon.fromTheme("dialog-error"), "Verify", self.verify_spec
-        )
+        verifier_btn = QPushButton("Set Verifier")
+        verifier_btn.clicked.connect(self.set_verifier)
+        file_toolbar.addWidget(verifier_btn)
+        self.verify_button = file_toolbar.addAction(QIcon.fromTheme("dialog-error"), "Verify", self.verify_spec)
+        self.compile_button = file_toolbar.addAction(QIcon.fromTheme("media-playback-start"), "Compile", self.compile_spec)
         # Create main window widget
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
-        # Create top toolbar layout
-        top_toolbar = QHBoxLayout()
-        verifier_button = QPushButton("Set Verifier")
-        verifier_button.clicked.connect(self.set_verifier)
-        top_toolbar.addWidget(verifier_button)
-        main_layout.addLayout(top_toolbar)
         # Create main edit area
         main_edit_layout = QHBoxLayout()
         # Create left editor
         left_layout = QVBoxLayout()
         left_label = QLabel("Editor")
         left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = left_label.font()
+        font.setPointSize(14)
+        left_label.setFont(font)
         left_layout.addWidget(left_label)
-        # Replace QTextEdit with CodeEditor
         self.editor = CodeEditor()
-        # use a monospaced font for typed text
-        mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-        mono.setPointSize(11)
+        mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)  # use a monospaced font for typed text
+        mono.setPointSize(14)
         self.editor.setFont(mono)
         self.editor.setPlaceholderText("Enter your Vehicle specification here...")
         # Add syntax highlighting
@@ -74,6 +68,9 @@ class VCLEditor(QMainWindow):
         right_layout = QVBoxLayout()
         right_label = QLabel("Additonal Inputs")
         right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = right_label.font()
+        font.setPointSize(14)
+        right_label.setFont(font)
         right_layout.addWidget(right_label)
         # Create scroll area for resource boxes
         scroll_area = QScrollArea()
@@ -90,7 +87,7 @@ class VCLEditor(QMainWindow):
         # Use regular QTextEdit for the output area
         self.output_box = QTextEdit()
         mono_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-        mono_font.setPointSize(11)
+        mono_font.setPointSize(14)
         self.output_box.setFont(mono_font)
         self.output_box.setReadOnly(True)
         self.output_box.setPlaceholderText("....")
@@ -104,20 +101,25 @@ class VCLEditor(QMainWindow):
         main_layout.addLayout(main_edit_layout)
         # Status bar
         self.status_bar = QStatusBar()
-        self.status_bar.setContentsMargins(0, 0, 0, 0)
-        self.status_bar.setStyleSheet("padding: 0px 0px;")
+        font = self.status_bar.font()
+        font.setPointSize(12)
+        self.status_bar.setFont(font)
+        self.status_bar.setSizeGripEnabled(False)  # hide the resize grip
+        self.status_bar.setContentsMargins(0, 0, 0, 2)
         self.setStatusBar(self.status_bar)
-        self.centralWidget().layout().setContentsMargins(0, 0, 0, 0)
-        self.centralWidget().layout().setSpacing(0)
+        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
+        self.centralWidget().layout().setContentsMargins(l, t, r, 0)  # set only bottom to 0, keep the rest
         # File path display
         self.file_path_label = QLabel("No File Open")
-        self.file_path_label.setContentsMargins(6, 0, 0, 0)
+        self.file_path_label.setContentsMargins(8, 0, 0, 0)
         self.status_bar.addWidget(self.file_path_label, 1)
         # Version display
         self.version_label = QLabel(f"Vehicle Version: {VERSION}")
+        self.version_label.setContentsMargins(0, 0, 0, 0)
         self.status_bar.addPermanentWidget(self.version_label)
         # Verifier display
         self.verifier_label = QLabel("No Verifier Set")
+        self.verifier_label.setContentsMargins(0, 0, 10, 0)
         self.status_bar.addPermanentWidget(self.verifier_label)
 
     def new_file(self):
