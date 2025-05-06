@@ -32,29 +32,26 @@ class VCLEditor(QMainWindow):
         file_toolbar.addAction(QIcon.fromTheme("document-new"),  "New",  self.new_file)
         file_toolbar.addAction(QIcon.fromTheme("document-open"), "Open", self.open_file)
         file_toolbar.addAction(QIcon.fromTheme("document-save"), "Save", self.save_file)
+        # Add spacer to push compile/verify to the right
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        file_toolbar.addWidget(spacer)
+        # Add compile/verify as icon actions
+        self.compile_button = file_toolbar.addAction(
+            QIcon.fromTheme("media-playback-start"), "Compile", self.compile_spec
+        )
+        self.verify_button = file_toolbar.addAction(
+            QIcon.fromTheme("dialog-error"), "Verify", self.verify_spec
+        )
         # Create main window widget
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         # Create top toolbar layout
         top_toolbar = QHBoxLayout()
-        # Add set verifier button
         verifier_button = QPushButton("Set Verifier")
         verifier_button.clicked.connect(self.set_verifier)
         top_toolbar.addWidget(verifier_button)
-        top_toolbar.addStretch(1)
-        # Add compile and verify buttons
-        output_layout = QHBoxLayout()
-        self.compile_button = QPushButton("Compile")
-        self.compile_button.clicked.connect(self.compile_spec)
-        output_layout.addWidget(self.compile_button)
-        # Add verify button
-        self.verify_button = QPushButton("Verify")
-        self.verify_button.clicked.connect(self.verify_spec)
-        output_layout.addWidget(self.verify_button)
-        # Add clear output button
-        top_toolbar.addLayout(output_layout)
-        top_toolbar.addStretch(1)
         main_layout.addLayout(top_toolbar)
         # Create main edit area
         main_edit_layout = QHBoxLayout()
