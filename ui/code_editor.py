@@ -1,14 +1,16 @@
-from PyQt6.QtWidgets import QTextEdit, QPlainTextEdit
-from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtWidgets import QTextEdit, QPlainTextEdit, QWidget
+from PyQt6.QtCore import Qt, QRect, QSize
 from PyQt6.QtGui import QColor, QPainter, QTextFormat
-from ui.line_number_area import LineNumberArea
 
 class CodeEditor(QPlainTextEdit):
     """Custom editor with line numbers"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        # Create line number area
-        self.line_number_area = LineNumberArea(self)
+        # Create inline line-number area
+        self.line_number_area = QWidget(self)
+        # Bind the size hint and paint events
+        self.line_number_area.sizeHint = lambda: QSize(self.line_number_area_width(), 0)
+        self.line_number_area.paintEvent = self.line_number_area_paint_event
         # Connect signals
         self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self.update_line_number_area)
