@@ -1,9 +1,6 @@
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
-                           QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
-                           QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
-                           QComboBox, QPlainTextEdit)
-from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
+from PyQt6.QtWidgets import QTextEdit, QPlainTextEdit
+from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtGui import QColor, QPainter, QTextFormat
 from ui.line_number_area import LineNumberArea
 
 class CodeEditor(QPlainTextEdit):
