@@ -1,12 +1,7 @@
 import os
-import sys
-import json
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (
-    QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
-)
-
+from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
 
 class ResourceBox(QFrame):
     def __init__(self, name, type_, data_type=None):

@@ -1,15 +1,7 @@
-import json
-import os
-import traceback
 
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
-                           QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
-                           QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
-                           QComboBox, QPlainTextEdit, QScrollArea, QSizePolicy)
-<<<<<<< HEAD
-from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat, QAction
-=======
+import os
+
+from PyQt6.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox, QScrollArea, QSizePolicy
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import (QRunnable, pyqtSlot)
 from PyQt6.QtGui import QFont
@@ -22,7 +14,6 @@ from ui.VCLBindings import VCLBindings
 from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
->>>>>>> 7e58e3f (Refactored file names of UI modules):ui/vcl_widget.py
 from vehicle_lang import verify, VERSION
 
 from pygments.lexers import get_lexer_by_name
@@ -30,7 +21,6 @@ from pygments import highlight
 from pygments.formatters import NullFormatter
 
 from superqt.utils import CodeSyntaxHighlight
-
 
 class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""

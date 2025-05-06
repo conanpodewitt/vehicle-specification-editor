@@ -1,10 +1,5 @@
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
-                           QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog,
-                           QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
-                           QComboBox, QPlainTextEdit)
-from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
-
+from PyQt6.QtWidgets import QWidget
+from PyQt6.QtCore import QSize
 
 class LineNumberArea(QWidget):
     """Widget for showing line numbers"""
