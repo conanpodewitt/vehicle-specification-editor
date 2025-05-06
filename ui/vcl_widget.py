@@ -124,7 +124,9 @@ class VCLEditor(QMainWindow):
         
         # Use regular QTextEdit for the output area
         self.output_box = QTextEdit()
-        self.output_box.setFont(QFont("Consolas", 11))
+        mono_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        mono_font.setPointSize(11)
+        self.output_box.setFont(mono_font)
         self.output_box.setReadOnly(True)
         self.output_box.setPlaceholderText("....")
 

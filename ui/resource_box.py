@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QFontDatabase
 from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
 
 class ResourceBox(QFrame):
@@ -9,7 +9,10 @@ class ResourceBox(QFrame):
         self.setObjectName("ResourceBox")
         layout = QVBoxLayout()
         title = QLabel(f"{type_.capitalize()}: {name}")
-        title.setFont(QFont("Consolas", 11, weight=QFont.Weight.Bold))
+        mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        mono.setPointSize(11)
+        mono.setWeight(QFont.Weight.Bold)
+        title.setFont(mono)
         layout.addWidget(title)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -41,7 +44,9 @@ class ResourceBox(QFrame):
 
             # Add a label to show the data type
             self.data_type_label = QLabel(f"Data Type: {data_type}")
-            self.data_type_label.setFont(QFont("Consolas", 10))
+            label_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+            label_font.setPointSize(10)
+            self.data_type_label.setFont(label_font)
             self.data_type_label.setAlignment(Qt.AlignmentFlag.AlignRight)
             layout.addWidget(self.data_type_label)
 
@@ -103,5 +108,4 @@ class ResourceBox(QFrame):
         self.input_box.setText(str(value))
         self.is_loaded = True
         self.value = value
-        
-        
+
