@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QComboBox, QPlainTextEdit)
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
-from ui.LineNumberArea import LineNumberArea
+from ui.line_number_area import LineNumberArea
 
 class CodeEditor(QPlainTextEdit):
     """Custom editor with line numbers"""

@@ -9,9 +9,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import (QRunnable, pyqtSlot)
 from PyQt6.QtGui import QFont
-from ui.CodeEditor import CodeEditor
-from ui.ResourceBox import ResourceBox
-from ui.VCLBindings import VCLBindings
+from ui.code_editor import CodeEditor
+from ui.resource_box import ResourceBox
+from ui.vcl_bindings import VCLBindings
 from vehicle_lang import verify, VERSION
 
 from pygments.lexers import get_lexer_by_name

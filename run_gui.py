@@ -11,8 +11,8 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QComboBox, QPlainTextEdit)
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat
-from ui.VehicleWidget import VCLEditor
-import ui.CodeEditor
+from ui.vcl_widget import VCLEditor
+import ui.code_editor
 
 #import vehicle_lang as vcl--
 
