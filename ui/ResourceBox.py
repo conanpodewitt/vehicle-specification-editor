@@ -21,18 +21,19 @@ class ResourceBox(QFrame):
         self.is_loaded = False
         self.type = type_
         self.name = name
+        self.data_type = data_type
 
         if type_ == "network":
             self.view_btn = QPushButton("View Network")
             self.load_btn = QPushButton("Load Network")
             self.view_btn.clicked.connect(lambda: print(f"Viewing network: {name}"))
-            self.load_btn.clicked.connect(self.set_path)
+            self.load_btn.clicked.connect(self.set_network)
             layout.addWidget(self.view_btn)
             layout.addWidget(self.load_btn)
 
         elif type_ == "dataset":
             self.load_btn = QPushButton("Load Dataset")
-            self.load_btn.clicked.connect(self.set_path)
+            self.load_btn.clicked.connect(self.set_dataset)
             layout.addWidget(self.load_btn)
 
         elif type_ == "parameter":
@@ -55,7 +56,7 @@ class ResourceBox(QFrame):
         self.setLayout(layout)
 
     
-    def set_path(self):
+    def set_network(self):
         """Open a network path"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open Vehicle Specification", "", "ONNX Files (*.onnx);;All Files (*)"
@@ -68,7 +69,21 @@ class ResourceBox(QFrame):
         self.is_loaded = True
 
     
-    def set_value(self, value):
+    def set_dataset(self):
+        """Open a dataset path"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open Dataset", "", "All Files (*)"
+        )
+        if not file_path:
+            return
+
+        self.path = file_path
+        self.load_btn.setText(f"Loaded: {os.path.basename(file_path)}")
+        self.is_loaded = True
+
+    
+    def set_value(self):
+        value = self.input_box.text()
         """Set the value of the parameter"""
         if self.data_type == "Rat":
             try:
@@ -92,5 +107,6 @@ class ResourceBox(QFrame):
             
         self.input_box.setText(str(value))
         self.is_loaded = True
+        self.value = value
         
         
