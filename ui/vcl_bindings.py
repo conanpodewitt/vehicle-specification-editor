@@ -2,7 +2,6 @@ import os
 import subprocess
 import vehicle_lang as vcl
 import json
-
 from vehicle_lang import VehicleError
 
 
