@@ -5,12 +5,7 @@ from PyQt6.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QW
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import (QRunnable, pyqtSlot)
 from PyQt6.QtGui import QFont
-<<<<<<< HEAD:ui/VehicleWidget.py
->>>>>>> f653559 (Add button functionality and resource-loader generation (#11))
-from ui.CodeEditor import CodeEditor
-from ui.ResourceBox import ResourceBox
-from ui.VCLBindings import VCLBindings
-=======
+from PyQt6.QtGui import QFontDatabase
 from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
@@ -103,7 +98,10 @@ class VCLEditor(QMainWindow):
         
         # Replace QTextEdit with CodeEditor
         self.editor = CodeEditor()
-        self.editor.setFont(QFont("Consolas", 11))
+        # use a monospaced font for typed text
+        mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        mono.setPointSize(11)
+        self.editor.setFont(mono)
         self.editor.setPlaceholderText("Enter your Vehicle specification here...")
         
         # Add syntax highlighting
