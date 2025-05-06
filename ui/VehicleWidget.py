@@ -11,6 +11,7 @@ from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
 from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat, QAction
 =======
 from PyQt6.QtCore import Qt
+from PyQt6.QtCore import (QRunnable, pyqtSlot)
 from PyQt6.QtGui import QFont
 >>>>>>> f653559 (Add button functionality and resource-loader generation (#11))
 from ui.CodeEditor import CodeEditor
@@ -271,22 +272,24 @@ class VCLEditor(QMainWindow):
 
     def compile_spec(self):
         """Compile the specification"""
-        if not self.save_before_operation():
-            return
-        
-        self.assign_resources()
-        if not all(box.is_loaded for box in self.resource_boxes):
-            QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
-            return
-        
-        self.status_bar.showMessage("Compiling...", 1000)
-        self.compile_button.setEnabled(False)
+        backgroundworker.compile_spec(self)
 
-        # Execute compilation
-        result = self.vcl_bindings.compile()
-        self.output_box.clear()
-        self.output_box.setPlainText(result)
-        self.compile_button.setEnabled(True)
+        # if not self.save_before_operation():
+        #     return
+        
+        # self.assign_resources()
+        # if not all(box.is_loaded for box in self.resource_boxes):
+        #     QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
+        #     return
+        
+        # self.status_bar.showMessage("Compiling...", 1000)
+        # self.compile_button.setEnabled(False)
+
+        # # Execute compilation
+        # result = self.vcl_bindings.compile()
+        # self.output_box.clear()
+        # self.output_box.setPlainText(result)
+        # self.compile_button.setEnabled(True)
     
 
     def verify_spec(self):
@@ -341,11 +344,11 @@ class VCLEditor(QMainWindow):
 
         self.resource_boxes.clear()
 
-        # Add new boxes from example json
+        # Add new boxes by calling 'vehicle list resources'
         for entry in self.vcl_bindings.resources():
-            name = entry.get("name")
-            type_ = entry.get("type")
-            data_type = entry.get("data_type", None)    
+            name = entry.get("entityName")
+            type_ = entry.get("entitySort").lstrip("@")
+            data_type = entry.get("entityType", None)    
             box = ResourceBox(name, type_, data_type=data_type)
             self.resource_layout.addWidget(box)
             self.resource_boxes.append(box)
@@ -360,7 +363,7 @@ class VCLEditor(QMainWindow):
                 elif box.type == "dataset":
                     self.vcl_bindings.set_dataset(box.name, box.path)
                 elif box.type == "parameter":
-                    self.vcl_bindings.set_property(box.name, box.value)
+                    self.vcl_bindings.set_parameter(box.name, box.value)
             else:
                 QMessageBox.warning(self, "Resource Error", f"Resource {box.name} is not loaded")
 
@@ -377,3 +380,28 @@ class VCLEditor(QMainWindow):
         self.vcl_path = path
         self.file_path_label.setText(f"File: {os.path.basename(path)}")
         self.generate_resource_boxes()
+
+
+
+class backgroundworker(QRunnable):
+
+
+    @pyqtSlot()
+    def compile_spec(self):
+        """Compile the specification"""
+        if not self.save_before_operation():
+            return
+        
+        self.assign_resources()
+        if not all(box.is_loaded for box in self.resource_boxes):
+            QMessageBox.warning(self, "Resource Error", "Please load all resources before verification")
+            return
+        
+        self.status_bar.showMessage("Compiling...", 1000)
+        self.compile_button.setEnabled(False)
+
+        # Execute compilation
+        result = self.vcl_bindings.compile()
+        self.output_box.clear()
+        self.output_box.setPlainText(result)
+        self.compile_button.setEnabled(True)

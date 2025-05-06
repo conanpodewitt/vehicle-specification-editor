@@ -1,5 +1,9 @@
 import os
 import subprocess
+import vehicle_lang as vcl
+import json
+
+from vehicle_lang import VehicleError
 
 
 def execute_vcl_command(command, *args, **kwargs):
@@ -37,49 +41,35 @@ class VCLBindings:
 		self._verifier_path = None
 		self._networks = {}
 		self._datasets = {}
-		self._properties = {}
+		self._parameters= {}
 
 
 	def compile(self):
 		"""Compile a VCL specification"""
-		network_args = {"network": f"{name}:{path}" for name, path in self._networks.items()}
-		dataset_args = {"dataset": f"{name}:{path}" for name, path in self._datasets.items()}
-		parameter_args = {"parameter": f"{name}:{value}" for name, value in self._properties.items()}
-		# Combine all arguments
-		args = {**network_args, **dataset_args, **parameter_args}
-		return execute_vcl_command("compile", target="MarabouQueries", specification=self._vcl_path, **args)
+		return vcl.compile_to_query(self._vcl_path, 
+							  vcl.QueryFormat.Marabou,
+							  networks=self._networks,
+							  datasets=self._datasets,
+							  parameters=self._parameters)
 	
 
 	def verify(self):
 		"""Verify a VCL specification"""
-		network_args = {"network": f"{name}:{path}" for name, path in self._networks.items()}
-		dataset_args = {"dataset": f"{name}:{path}" for name, path in self._datasets.items()}
-		parameter_args = {"parameter": f"{name}:{value}" for name, value in self._properties.items()}
-		# Combine all arguments
-		args = {**network_args, **dataset_args, **parameter_args}
-		return execute_vcl_command("verify", 
-							   specification=self._vcl_path, 
-							   verifier="Marabou", 
-							   verifier_location=self._verifier_path, **args)
+		return vcl.verify(self._vcl_path,
+						  properties=self._parameters,
+						  networks=self._networks,
+						  datasets=self._datasets,
+						  parameters=self._parameters,
+						  verifier_location=self._verifier_path)
 		
 	
 	def resources(self):
 		"""Get the resources used by the VCLBindings"""
 		# Original form of resources: [ @network classifier Image -> Vector Rat 10 ]
-		vcl_output = execute_vcl_command("list", "resources", specification=self._vcl_path)
-		vcl_output = vcl_output.strip()[1:-1]
-		vcl_output = vcl_output.split(",")
-
-		for resource in vcl_output:
-			json_resource = {}
-			resource = resource.strip().split(" ")
-			json_resource["type"] = resource[0].lstrip("@")
-			json_resource["name"] = resource[1]
-
-			if json_resource["type"] == "parameter":
-				json_resource["data_type"] = resource[2]
-			
-			yield json_resource
+		vcl_output = vcl.list_resources(self._vcl_path)
+		if not vcl_output:
+			raise VehicleError("No resources found in VCL file. Something is wrong.")
+		return json.loads(vcl_output)
 		
 
 	@property
@@ -128,16 +118,16 @@ class VCLBindings:
 		self._datasets[name] = path
 
 
-	def set_property(self, name, value):
+	def set_parameter(self, name, value):
 		"""Add a property to the VCLBindings"""
-		self._properties[name] = value
+		self._parameters[name] = value
 
 
 	def clear(self):
 		"""Clear all networks, datasets, and properties"""
 		self._networks.clear()
 		self._datasets.clear()
-		self._properties.clear()
+		self._parameters.clear()
 		self._vcl_path = None
 
 	
