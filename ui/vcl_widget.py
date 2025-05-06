@@ -1,5 +1,5 @@
 import os
-from PyQt6.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox, QScrollArea, QSizePolicy, QToolBar
+from PyQt6.QtWidgets import QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget, QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox, QScrollArea, QSizePolicy, QToolBar, QFrame
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import (QRunnable, pyqtSlot)
 from PyQt6.QtGui import QFontDatabase, QIcon
@@ -7,7 +7,6 @@ from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from vehicle_lang import VERSION
-
 from superqt.utils import CodeSyntaxHighlight
 
 class VCLEditor(QMainWindow):
@@ -103,21 +102,23 @@ class VCLEditor(QMainWindow):
         right_layout.addWidget(self.output_box)
         main_edit_layout.addLayout(right_layout, 2)  # Right side takes 2/5
         main_layout.addLayout(main_edit_layout)
-        # Create status bar
+        # Status bar
         self.status_bar = QStatusBar()
+        self.status_bar.setContentsMargins(0, 0, 0, 0)
+        self.status_bar.setStyleSheet("padding: 0px 0px;")
         self.setStatusBar(self.status_bar)
-        # Add file path display
-        self.file_path_label = QLabel("No file opened")
+        self.centralWidget().layout().setContentsMargins(0, 0, 0, 0)
+        self.centralWidget().layout().setSpacing(0)
+        # File path display
+        self.file_path_label = QLabel("No File Open")
+        self.file_path_label.setContentsMargins(6, 0, 0, 0)
         self.status_bar.addWidget(self.file_path_label, 1)
-        self.verifier_label = QLabel("Verifier not set")
+        # Version display
+        self.version_label = QLabel(f"Vehicle Version: {VERSION}")
+        self.status_bar.addPermanentWidget(self.version_label)
+        # Verifier display
+        self.verifier_label = QLabel("No Verifier Set")
         self.status_bar.addPermanentWidget(self.verifier_label)
-        # Create bottom toolbar
-        bottom_layout = QHBoxLayout()
-        version_button = QPushButton("Version")
-        version_button.clicked.connect(self.show_version)
-        bottom_layout.addWidget(version_button)
-        bottom_layout.addStretch(1)
-        main_layout.addLayout(bottom_layout)
 
     def new_file(self):
         """Create a new file"""
