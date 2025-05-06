@@ -6,7 +6,7 @@ class CodeEditor(QPlainTextEdit):
     """Custom editor with line numbers"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        # use a fixed-width font everywhere
+        # Use a fixed-width font everywhere
         mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         mono.setPointSize(14)
         self.setFont(mono)
@@ -31,7 +31,8 @@ class CodeEditor(QPlainTextEdit):
             max_num //= 10
             digits += 1
         space = self.fontMetrics().horizontalAdvance('9') * digits
-        return space
+        padding = 4
+        return space + 2 * padding
 
     def update_line_number_area_width(self, new_block_count):
         """Update the margin according to the line number area width"""
@@ -55,7 +56,7 @@ class CodeEditor(QPlainTextEdit):
     def line_number_area_paint_event(self, event):
         """Paint the line numbers"""
         painter = QPainter(self.line_number_area)
-        # draw line numbers in the same monospaced font
+        # Draw line numbers in the same monospaced font
         painter.setFont(self.font())
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -65,10 +66,11 @@ class CodeEditor(QPlainTextEdit):
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
                 painter.setPen(QColor(150, 150, 150))
+                padding = 4
                 painter.drawText(
-                    0,
+                    padding,
                     int(top),
-                    self.line_number_area.width(),
+                    self.line_number_area.width() - 2 * padding,
                     self.fontMetrics().height(),
                     Qt.AlignmentFlag.AlignRight,
                     number
