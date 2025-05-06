@@ -50,7 +50,7 @@ class VCLEditor(QMainWindow):
         # Create left editor
         left_layout = QVBoxLayout()
         left_label = QLabel("Editor")
-        left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        left_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = left_label.font()
         font.setPointSize(14)
         left_label.setFont(font)
@@ -66,8 +66,8 @@ class VCLEditor(QMainWindow):
         main_edit_layout.addLayout(left_layout, 3)  # Left side takes 3/5
         # Create right output area
         right_layout = QVBoxLayout()
-        right_label = QLabel("Additonal Inputs")
-        right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        right_label = QLabel("Additonal Input")
+        right_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = right_label.font()
         font.setPointSize(14)
         right_label.setFont(font)
@@ -84,22 +84,26 @@ class VCLEditor(QMainWindow):
         self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll_content.setLayout(self.resource_layout)
         scroll_area.setWidget(scroll_content)
-        # Use regular QTextEdit for the output area
+        right_layout.addWidget(scroll_area)
+        output_label = QLabel("Output")
+        output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        font = output_label.font()
+        font.setPointSize(14)
+        output_label.setFont(font)
+        right_layout.addWidget(output_label)
         self.output_box = QTextEdit()
         mono_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         mono_font.setPointSize(14)
         self.output_box.setFont(mono_font)
         self.output_box.setReadOnly(True)
-        self.output_box.setPlaceholderText("....")
         # Set size policy for scroll area and output box
         scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.output_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         scroll_area.setMinimumWidth(200)
-        right_layout.addWidget(scroll_area)
         right_layout.addWidget(self.output_box)
         main_edit_layout.addLayout(right_layout, 2)  # Right side takes 2/5
         main_layout.addLayout(main_edit_layout)
-        # Status bar ----------------------------------------------------------
+        # Create status bar ---------------------------------------------------
         self.status_bar = QStatusBar()
         font = self.status_bar.font()
         font.setPointSize(12)
