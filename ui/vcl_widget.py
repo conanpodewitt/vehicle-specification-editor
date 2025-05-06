@@ -13,10 +13,16 @@ from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTex
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import (QRunnable, pyqtSlot)
 from PyQt6.QtGui import QFont
+<<<<<<< HEAD:ui/VehicleWidget.py
 >>>>>>> f653559 (Add button functionality and resource-loader generation (#11))
 from ui.CodeEditor import CodeEditor
 from ui.ResourceBox import ResourceBox
 from ui.VCLBindings import VCLBindings
+=======
+from ui.code_editor import CodeEditor
+from ui.resource_box import ResourceBox
+from ui.vcl_bindings import VCLBindings
+>>>>>>> 7e58e3f (Refactored file names of UI modules):ui/vcl_widget.py
 from vehicle_lang import verify, VERSION
 
 from pygments.lexers import get_lexer_by_name
