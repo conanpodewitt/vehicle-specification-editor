@@ -1,12 +1,7 @@
 import os
-import sys
-import json
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (
-    QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
-)
-
+from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
 
 class ResourceBox(QFrame):
     def __init__(self, name, type_, data_type=None):
@@ -14,15 +9,16 @@ class ResourceBox(QFrame):
         self.setObjectName("ResourceBox")
         layout = QVBoxLayout()
         title = QLabel(f"{type_.capitalize()}: {name}")
-        title.setFont(QFont("Consolas", 11, weight=QFont.Weight.Bold))
+        mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        mono.setPointSize(11)
+        mono.setWeight(QFont.Weight.Bold)
+        title.setFont(mono)
         layout.addWidget(title)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
         self.is_loaded = False
         self.type = type_
         self.name = name
         self.data_type = data_type
-
         if type_ == "network":
             self.view_btn = QPushButton("View Network")
             self.load_btn = QPushButton("Load Network")
@@ -30,31 +26,26 @@ class ResourceBox(QFrame):
             self.load_btn.clicked.connect(self.set_network)
             layout.addWidget(self.view_btn)
             layout.addWidget(self.load_btn)
-
         elif type_ == "dataset":
             self.load_btn = QPushButton("Load Dataset")
             self.load_btn.clicked.connect(self.set_dataset)
             layout.addWidget(self.load_btn)
-
         elif type_ == "parameter":
             if data_type is None:
                 raise ValueError("Data type must be specified for parameters.")
-
             self.input_box = QLineEdit()
             self.input_box.editingFinished.connect(self.set_value)
             layout.addWidget(self.input_box)
-
             # Add a label to show the data type
             self.data_type_label = QLabel(f"Data Type: {data_type}")
-            self.data_type_label.setFont(QFont("Consolas", 10))
+            label_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+            label_font.setPointSize(10)
+            self.data_type_label.setFont(label_font)
             self.data_type_label.setAlignment(Qt.AlignmentFlag.AlignRight)
             layout.addWidget(self.data_type_label)
-
             self.input_box.setPlaceholderText(f"Enter {self.data_type} value")
             self.data_type = data_type
-
         self.setLayout(layout)
-
     
     def set_network(self):
         """Open a network path"""
@@ -63,12 +54,10 @@ class ResourceBox(QFrame):
         )
         if not file_path:
             return
-
         self.path = file_path
         self.load_btn.setText(f"Loaded: {os.path.basename(file_path)}")
         self.is_loaded = True
 
-    
     def set_dataset(self):
         """Open a dataset path"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -76,11 +65,9 @@ class ResourceBox(QFrame):
         )
         if not file_path:
             return
-
         self.path = file_path
         self.load_btn.setText(f"Loaded: {os.path.basename(file_path)}")
         self.is_loaded = True
-
     
     def set_value(self):
         value = self.input_box.text()
@@ -104,9 +91,6 @@ class ResourceBox(QFrame):
             value = value.lower() == "true"
         else:
             raise ValueError(f"Unexpected data type: {self.data_type}")
-            
         self.input_box.setText(str(value))
         self.is_loaded = True
         self.value = value
-        
-        
