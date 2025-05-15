@@ -67,7 +67,7 @@ class VCLEditor(QMainWindow):
 
     def show_ui(self):
         """Initialize UI"""
-        # Create menu bar -----------------------------------------------------
+        # Create menu bar
         file_toolbar = QToolBar("File")
         self.addToolBar(file_toolbar)
         file_toolbar.setMovable(False)
@@ -76,10 +76,12 @@ class VCLEditor(QMainWindow):
         file_toolbar.addAction(QIcon.fromTheme("document-open"), "Open", self.open_file)
         file_toolbar.addAction(QIcon.fromTheme("document-save"), "Save", self.save_file)
 
+        # Add a spacer to the toolbar. This will push the buttons to the right
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         file_toolbar.addWidget(spacer)
 
+        # Add set verifier, compile, and verify buttons
         verifier_btn = QPushButton(QIcon.fromTheme("computer"), "Set Verifier")
         verifier_btn.clicked.connect(self.set_verifier)
         file_toolbar.addWidget(verifier_btn)
@@ -113,7 +115,7 @@ class VCLEditor(QMainWindow):
         mono.setPointSize(14)
         self.editor.setFont(mono)
         self.editor.setPlaceholderText("Enter your Vehicle specification here...")
-        self.highlighter = CodeSyntaxHighlight(self.editor.document(), "external", "vs")
+        self.highlighter = CodeSyntaxHighlight(self.editor.document(), "external", "vs")    # Added syntax highlighting
         left_layout.addWidget(self.editor)
         main_edit_layout.addLayout(left_layout, 3)
 
@@ -129,8 +131,10 @@ class VCLEditor(QMainWindow):
         # Create scroll area for resource boxes
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        # Only show vertical scrollbar when needed
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Create a widget to hold the resource boxes
         scroll_content = QWidget()
         self.resource_layout = QVBoxLayout(scroll_content)
         self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -151,6 +155,7 @@ class VCLEditor(QMainWindow):
         self.output_box.setFont(mono_font)
         self.output_box.setReadOnly(True)
 
+        # Set size policy for output box and scroll area
         scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.output_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         scroll_area.setMinimumWidth(200)
@@ -158,7 +163,7 @@ class VCLEditor(QMainWindow):
         main_edit_layout.addLayout(right_layout, 2)
         main_layout.addLayout(main_edit_layout)
 
-        # Create status bar ---------------------------------------------------
+        # Create status bar
         self.status_bar = QStatusBar()
         font = self.status_bar.font()
         font.setPointSize(12)
@@ -169,51 +174,63 @@ class VCLEditor(QMainWindow):
         l, t, r, _ = self.centralWidget().layout().getContentsMargins()
         self.centralWidget().layout().setContentsMargins(l, t, r, 0)
 
+        # File path label
         self.file_path_label = QLabel("No File Open")
         self.file_path_label.setContentsMargins(8, 0, 0, 0)
         self.file_path_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.file_path_label.mouseReleaseEvent = lambda event: self.open_file()
         self.status_bar.addWidget(self.file_path_label)
 
+        # Sperateor between file display and cursor position
         sep_fd_cursor = QFrame()
         sep_fd_cursor.setFrameShape(QFrame.Shape.VLine)
         sep_fd_cursor.setFrameShadow(QFrame.Shadow.Sunken)
         self.status_bar.addWidget(sep_fd_cursor)
 
+        # Cursor position label
         self.position_label = QLabel("Ln 1, Col 1")
         self.position_label.setContentsMargins(5, 0, 5, 0)
         self.status_bar.addWidget(self.position_label)
 
+        # Spacer between cursor position and spacer
         sep_cursor_space = QFrame()
         sep_cursor_space.setFrameShape(QFrame.Shape.VLine)
         sep_cursor_space.setFrameShadow(QFrame.Shadow.Sunken)
         self.status_bar.addWidget(sep_cursor_space)
 
+        # Big expanding spacer
         spacer_status = QWidget()
         spacer_status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.status_bar.addWidget(spacer_status)
 
+        # Seperator before version and verifier
         sep_group2 = QFrame()
         sep_group2.setFrameShape(QFrame.Shape.VLine)
         sep_group2.setFrameShadow(QFrame.Shadow.Sunken)
         self.status_bar.addPermanentWidget(sep_group2)
-
+        
+        # Version label
         self.version_label = QLabel(f"Vehicle Version: {VERSION}")
         self.version_label.setContentsMargins(0, 0, 0, 0)
         self.status_bar.addPermanentWidget(self.version_label)
 
+        # Seperator between version and verifier
         sep_verifier = QFrame()
         sep_verifier.setFrameShape(QFrame.Shape.VLine)
         sep_verifier.setFrameShadow(QFrame.Shadow.Sunken)
         self.status_bar.addPermanentWidget(sep_verifier)
 
+        # Verifier label
         self.verifier_label = QLabel("No Verifier Set")
         self.verifier_label.setContentsMargins(0, 0, 10, 0)
         self.verifier_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.verifier_label.mouseReleaseEvent = lambda event: self.set_verifier()
         self.status_bar.addPermanentWidget(self.verifier_label)
 
+        # Connect cursor movements to update the position indicator
         self.editor.cursorPositionChanged.connect(self.update_cursor_position)
+
+    # --- File Operations ---
 
     def new_file(self):
         self.editor.clear()
@@ -291,6 +308,8 @@ class VCLEditor(QMainWindow):
                 QMessageBox.critical(self, "Save Error", f"Could not save file '{self.vcl_path}': {e}")
                 return False
 
+    # --- Compilation and Verification ---
+
     def _perform_compile(self):
         return self.vcl_bindings.compile()
 
@@ -298,7 +317,6 @@ class VCLEditor(QMainWindow):
         if not self.save_before_operation():
             return
         
-        # Ensure resources are assigned (this part is quick, involves reading UI state)
         self.assign_resources() 
         if not all(box.is_loaded for box in self.resource_boxes):
             QMessageBox.warning(self, "Resource Error", "Please load all required file-based resources (networks, datasets) before compilation.")
@@ -346,6 +364,7 @@ class VCLEditor(QMainWindow):
         self.thread_pool.start(worker)
 
     # --- Worker Signal Handlers ---
+
     def handle_worker_result(self, output_text):
         self.output_box.setPlainText(output_text)
         self.status_bar.showMessage(f"{self.current_operation} completed successfully.", 5000)
@@ -361,6 +380,7 @@ class VCLEditor(QMainWindow):
         self.status_bar.showMessage(f"Error during {self.current_operation}. Check output for details.", 5000)
 
     # --- Resource Management ---
+
     def clear_resource_boxes(self):
         while self.resource_layout.count():
             item = self.resource_layout.takeAt(0)
