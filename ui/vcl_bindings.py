@@ -1,30 +1,77 @@
 import os
-import subprocess
+import sys
 import vehicle_lang as vcl
 import json
+import asyncio
 from vehicle_lang import VehicleError
+from typing import Sequence, Optional, Callable
 
-def execute_vcl_command(command, *args, **kwargs):
-	"""Execute a command and return the output"""
-	cmd = ["vehicle", command]
-	# Add the positional arguments
-	for command_arg in args:
-		cmd.append(command_arg)
-	# Add the optional
-	for option, value in kwargs.items():
-		option = option.replace("_", "-")
-		cmd.append(f"--{option}")
-		cmd.append(value)
-	result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-	if result.returncode == 0:
-		return result.stdout
-	else:
-		error_msg = f"{command} failed (exit code {result.code}):\n\n"
-		if result.stderr:
-			error_msg += f"Error output:\n{result.stderr}\n\n"
-		if result.stdout:
-			error_msg += f"Standard output:\n{result.stdout}"
-		return error_msg
+
+class Runner:
+	def __init__(self, command: str,  script: str = "_run_vcl.py", *args: str, **kwargs: str):
+		self.script_path = os.path.join(os.path.dirname(__file__), script)
+		self.cmd = self.build_command(command, args, kwargs)
+
+	def build_command(self, command: str, args: Sequence[str], kwargs: dict) -> list[str]:
+		cmd = [sys.executable, "-u", self.script_path, command]
+
+		# Add positional arguments
+		cmd.extend(args)
+
+		# Add keyword arguments as --option value
+		for option, value in kwargs.items():
+			flag = f"--{option.replace('_', '-')}"
+			# Handle networks, datasets, and parameters, which are dictionaries of name-value pairs
+			if isinstance(value, dict):
+				for name, value in value.items():
+					cmd.append(flag)
+					cmd.append(f"{name}:{value}")
+			else:
+				cmd.append(flag)
+				cmd.append(str(value))
+
+		return cmd
+
+	async def run(self, line_reader: Callable, finish_fn: Callable, stop_event: asyncio.Event) -> str:
+		process = await asyncio.create_subprocess_exec(
+			*self.cmd,
+			stdout=asyncio.subprocess.PIPE,
+			stderr=asyncio.subprocess.PIPE
+		)
+		print(f"[DEBUG] Running command: {' '.join(self.cmd)}")
+
+		stdout_lines = []
+		stderr_lines = []
+
+		async def stream_output(stream, buffer, tag):
+			while True:
+				if stop_event.is_set():
+					process.terminate()
+					try:
+						await asyncio.wait_for(process.wait(), timeout=1)
+					except asyncio.TimeoutError:
+						process.kill()
+					return
+
+				data_chunk = await stream.read(4096)
+				if not data_chunk:
+					break
+				decoded = data_chunk.decode(errors="replace")
+				line_reader(tag, decoded)
+				buffer.append(decoded)
+
+		await asyncio.gather(
+			stream_output(process.stdout, stdout_lines, "stdout"),
+			stream_output(process.stderr, stderr_lines, "stderr"),
+		)
+
+		exit_code = await process.wait()
+		finish_fn(exit_code)
+
+
+	def run_sync(self, command: str, *args: str, **kwargs: str) -> str:
+		return asyncio.run(self.run(command, *args, **kwargs))
+
 
 class VCLBindings:
 	"""Python bindings for the Vehicle command-line tool"""
@@ -34,24 +81,40 @@ class VCLBindings:
 		self._verifier_path = None
 		self._networks = {}
 		self._datasets = {}
-		self._parameters= {}
+		self._parameters = {}
 
-	def compile(self):
+	def compile(self, callback_fn: Callable, finish_fn: Callable, stop_event: asyncio.Event):
 		"""Compile a VCL specification"""
-		return vcl.compile_to_query(self._vcl_path, 
-							  vcl.QueryFormat.Marabou,
-							  networks=self._networks,
-							  datasets=self._datasets,
-							  parameters=self._parameters)
+		runner = Runner(
+			command="compile", 
+			specification=self._vcl_path, 
+			network=self._networks,
+			dataset=self._datasets,
+			parameter=self._parameters,
+			target="MarabouQueries"
+		)
+		asyncio.run(runner.run(
+			line_reader=callback_fn, 
+			finish_fn=finish_fn,
+			stop_event=stop_event,
+		))
 	
-	def verify(self):
-		"""Verify a VCL specification"""
-		return vcl.verify(self._vcl_path,
-						  properties=self._parameters,
-						  networks=self._networks,
-						  datasets=self._datasets,
-						  parameters=self._parameters,
-						  verifier_location=self._verifier_path)
+	def verify(self, callback_fn: Callable, finish_fn: Callable, stop_event: asyncio.Event):	
+		"""Verify a VCL specification"""		
+		runner = Runner(
+			command="verify", 
+			specification=self._vcl_path, 
+			verifier="Marabou", 
+			verifier_location=self._verifier_path, 
+			network=self._networks,
+			dataset=self._datasets,
+			parameter=self._parameters,
+		)
+		asyncio.run(runner.run(
+			line_reader=callback_fn, 
+			finish_fn=finish_fn,
+			stop_event=stop_event,
+		))
 
 	def resources(self):
 		"""Get the resources used by the VCLBindings"""
