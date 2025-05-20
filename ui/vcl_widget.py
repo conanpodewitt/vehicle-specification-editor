@@ -7,13 +7,16 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, Q
                              QTabWidget)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QFontDatabase, QIcon
-from ui.code_editor import CodeEditor
-from ui.resource_box import ResourceBox
-from ui.vcl_bindings import VCLBindings
-from vehicle_lang import VERSION 
 from superqt.utils import CodeSyntaxHighlight
 import functools
 from typing import Callable
+
+from ui.code_editor import CodeEditor
+from ui.resource_box import ResourceBox
+from ui.vcl_bindings import VCLBindings
+from ui.heirachical_output import HeirarchicalOutput
+
+from vehicle_lang import VERSION 
 
 
 class OperationSignals(QObject):
@@ -183,20 +186,18 @@ class VCLEditor(QMainWindow):
         right_layout.addWidget(right_label)
 
         # Create scroll area for resource boxes
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-
-        # Only show vertical scrollbar when needed
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        resource_scroll_area = QScrollArea()
+        resource_scroll_area.setWidgetResizable(True)
+        resource_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        resource_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         # Create a widget to hold the resource boxes
-        scroll_content = QWidget()
-        self.resource_layout = QVBoxLayout(scroll_content)
+        resource_scroll_content = QWidget()
+        self.resource_layout = QVBoxLayout(resource_scroll_content)
         self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        scroll_content.setLayout(self.resource_layout)
-        scroll_area.setWidget(scroll_content)
-        right_layout.addWidget(scroll_area)
+        resource_scroll_content.setLayout(self.resource_layout)
+        resource_scroll_area.setWidget(resource_scroll_content)
+        right_layout.addWidget(resource_scroll_area)
 
         # Create output area
         output_label = QLabel("Output")
@@ -205,17 +206,22 @@ class VCLEditor(QMainWindow):
         font.setPointSize(14)
         output_label.setFont(font)
         right_layout.addWidget(output_label)
-        self.output_box = QTextEdit()
-        mono_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-        mono_font.setPointSize(14)
-        self.output_box.setFont(mono_font)
-        self.output_box.setReadOnly(True)
+
+        # Create a scroll area for the output box
+        output_qscrollarea = QScrollArea()
+        output_qscrollarea.setWidgetResizable(True)
+        output_qscrollarea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        output_qscrollarea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        # Create output box
+        self.output_box = HeirarchicalOutput()
+        output_qscrollarea.setWidget(self.output_box)
+        right_layout.addWidget(output_qscrollarea)
 
         # Set size policy for output box and scroll area
-        scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.output_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        scroll_area.setMinimumWidth(200)
-        right_layout.addWidget(self.output_box)
+        resource_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        output_qscrollarea.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        resource_scroll_area.setMinimumWidth(200)
         main_edit_layout.addLayout(right_layout, 2)
         main_layout.addLayout(main_edit_layout)
 
@@ -329,7 +335,7 @@ class VCLEditor(QMainWindow):
             self.status_bar.showMessage(f"Saved: {current_file_path}", 3000)
             self.set_vcl_path(current_file_path)
             self.editor.document().setModified(False) 
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Save File Error", f"Could not save file: {e}")
             self.problems_console.append(f"Error saving file: {e}")
