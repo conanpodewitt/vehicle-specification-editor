@@ -374,11 +374,12 @@ class VCLEditor(QMainWindow):
     def _gui_process_output_chunk(self, tag: str, chunk: str):
         """Processes output chunks received from the worker thread."""
         if tag == "stderr":
-            self.problems_console.insertPlainText(chunk)
-            self.problems_console.ensureCursorVisible()
+            current_widget = self.problems_console
         elif tag == "stdout":
-            self.log_console.insertPlainText(chunk)
-            self.log_console.ensureCursorVisible()
+            current_widget = self.log_console
+        current_widget.insertPlainText(chunk)
+        current_widget.ensureCursorVisible()
+        self.console_tab_widget.setCurrentWidget(current_widget)
 
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
@@ -422,7 +423,7 @@ class VCLEditor(QMainWindow):
             QMessageBox.warning(self, "Resource Error", "Please load all required resources (networks, datasets, parameters) before compilation/verification")
             return
 
-        self.status_bar.showMessage(f"{operation_name.capitalize()}... Please wait.", 0)
+        self.status_bar.showMessage(f"Performing {operation_name.capitalize()}... Please wait.", 0)
         self.compile_button.setEnabled(False)
         self.verify_button.setEnabled(False)
         self.stop_button.setEnabled(True)
