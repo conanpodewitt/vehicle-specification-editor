@@ -38,32 +38,30 @@ class Runner:
 			stdout=asyncio.subprocess.PIPE,
 			stderr=asyncio.subprocess.PIPE
 		)
-		print(f"[DEBUG] Running command: {' '.join(self.cmd)}")
 
-		stdout_lines = []
-		stderr_lines = []
-
-		async def stream_output(stream, buffer, tag):
+		async def stream_output(stream, tag):
 			while True:
-				if stop_event.is_set():
-					process.terminate()
-					try:
-						await asyncio.wait_for(process.wait(), timeout=1)
-					except asyncio.TimeoutError:
-						process.kill()
-					return
-
 				data_chunk = await stream.read(4096)
 				if not data_chunk:
 					break
 				decoded = data_chunk.decode(errors="replace")
 				line_reader(tag, decoded)
-				buffer.append(decoded)
 
-		await asyncio.gather(
-			stream_output(process.stdout, stdout_lines, "stdout"),
-			stream_output(process.stderr, stderr_lines, "stderr"),
-		)
+		async def watch_stop():
+			while True:
+				await asyncio.sleep(0.1)
+				if stop_event.is_set():
+					print(f"[DEBUG] Stopping process: {self.cmd}")
+					try:
+						process.terminate()
+					except ProcessLookupError:
+						pass
+
+		stdout_task = asyncio.create_task(stream_output(process.stdout, "stdout"))
+		stderr_task = asyncio.create_task(stream_output(process.stderr, "stderr"))
+		stop_task = asyncio.create_task(watch_stop())
+
+		await asyncio.wait([stdout_task, stderr_task, stop_task], return_when=asyncio.FIRST_COMPLETED)
 
 		exit_code = await process.wait()
 		finish_fn(exit_code)
