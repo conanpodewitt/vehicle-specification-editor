@@ -3,7 +3,7 @@ Module palette.py
 
 This module contains the color style references for the graphics
 
-Author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
+Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 
