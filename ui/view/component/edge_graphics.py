@@ -1,11 +1,11 @@
 """
-Module graphics_edge.py
+Module edge_graphics.py
 
-This module contains the class GraphicsEdge and its concrete children
-GraphicsDirectEdge and GraphicsBezierEdge for displaying edges connecting
+This module contains the class EdgeGraphics and its concrete children
+DirectEdgeGraphics and BezierEdgeGraphics for displaying edges connecting
 the blocks
 
-Author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
+Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 
@@ -19,28 +19,16 @@ from PyQt6.QtWidgets import QGraphicsPathItem, QStyleOptionGraphicsItem
 
 import ui.view.styling.dimension as dim
 import ui.view.styling.palette as palette
-# Dummy imports - replace with actual implementations
-# from coconet.model.component.socket import SocketType
-
-# Import types from dummy_types
-from ..dummy_types import Edge
-
-# Dummy enum to replace SocketType
-class SocketType:
-    INPUT = "input"
-    OUTPUT = "output"
+from ..base_types import Edge, SocketType
 
 
-class GraphicsEdge(QGraphicsPathItem):
-    """
-    This abstract class represents a general Graphics Edge for linking blocks.
-    It provides positional parameters and painting methods
-
-    """
+class EdgeGraphics(QGraphicsPathItem):
+    """Graphics representation of an Edge domain model"""
 
     def __init__(self, edge: 'Edge', parent=None):
         super().__init__(parent)
 
+        # Reference to edge domain model
         self.edge_ref = edge
 
         if self.edge_ref.view_dim:
@@ -155,43 +143,39 @@ class GraphicsEdge(QGraphicsPathItem):
         return self.shape().boundingRect()
 
 
-class GraphicsDirectEdge(GraphicsEdge):
+class DirectEdgeGraphics(EdgeGraphics):
     """
-    This class implements a direct path for the edge
+    This class displays a direct edge from point A to point B
 
     """
-
-    def __init__(self, edge, parent=None):
-        super().__init__(edge, parent)
 
     def update_path(self):
+        """
+        This method draws the actual line between two positions
+
+        """
+
         path = QPainterPath(QPointF(self.src_pos[0], self.src_pos[1]))
         path.lineTo(self.dest_pos[0], self.dest_pos[1])
         self.setPath(path)
 
-    def calc_path(self) -> QPainterPath:
-        """
-        Compute the direct line connection
+    def boundingRect(self) -> QRectF:
+        return self.shape().boundingRect()
 
-        Returns
-        ----------
-        QPainterPath
-            The path of this edge
+    def shape(self) -> QPainterPath:
+        return self.path()
 
-        """
-
-        path = QPainterPath(QPointF(self.src_pos[0], self.src_pos[1]))
-        path.lineTo(self.dest_pos[0], self.dest_pos[1])
-        return path
+    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None) -> None:
+        painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+        painter.setPen(self._pen)
+        painter.drawPath(self.path())
 
 
-class GraphicsBezierEdge(GraphicsEdge):
-    """
-    This class implements a bezier path for the edge
-
-    """
+class BezierEdgeGraphics(EdgeGraphics):
+    """Graphics representation using a bezier path for the edge"""
 
     def __init__(self, edge, parent=None):
+        super().__init__(edge, parent)
         super().__init__(edge, parent)
 
     def update_path(self):

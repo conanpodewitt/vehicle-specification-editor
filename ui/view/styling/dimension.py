@@ -3,7 +3,7 @@ Module dimension.py
 
 This module contains the dimension references for the graphics
 
-Author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
+Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 

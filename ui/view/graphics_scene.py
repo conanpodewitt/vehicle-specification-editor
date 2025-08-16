@@ -3,7 +3,7 @@ Module graphics_scene.py
 
 This module contains the GraphicsScene class for handling graphics objects representation
 
-Author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
+Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 
@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import QGraphicsScene
 
 import ui.view.styling.dimension as dim
 import ui.view.styling.palette as palette
-from .dummy_types import Scene
 
 
 class GraphicsScene(QGraphicsScene):
@@ -35,10 +34,10 @@ class GraphicsScene(QGraphicsScene):
     itemSelected = pyqtSignal()
     itemsDeselected = pyqtSignal()
 
-    def __init__(self, scene: 'Scene', parent=None):
+    def __init__(self, scene=None, parent=None):
         super().__init__(parent)
 
-        # Reference to the scene
+        # Reference to the scene (optional)
         self.scene_ref = scene
 
         # Create the scene rectangle

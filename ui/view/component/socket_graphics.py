@@ -1,9 +1,9 @@
 """
-Module graphics_socket.py
+Module socket_graphics.py
 
 This module contains the graphical representation of a Socket element
 
-Author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
+Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 
@@ -13,20 +13,15 @@ from PyQt6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem
 
 import ui.view.styling.dimension as dim
 import ui.view.styling.palette as palette
-
-# Import types from dummy_types
-from ..dummy_types import Socket, get_classname
+from ..base_types import Socket
 
 
-class GraphicsSocket(QGraphicsItem):
-    """
-    This class provides the graphics representation of a Socket object
-
-    """
+class SocketGraphics(QGraphicsItem):
+    """Graphics representation of a Socket domain model"""
 
     def __init__(self, socket: 'Socket', parent=None):
         super().__init__(parent)
-        # Reference to socket
+        # Reference to socket domain model
         self.socket_ref = socket
 
         # Style parameters
@@ -41,17 +36,10 @@ class GraphicsSocket(QGraphicsItem):
         self.setZValue(-1)
 
     def init_colors(self):
-        if get_classname(self.socket_ref.block_ref) == 'LayerBlock':
-            self.bg_color = QColor(palette.DARK_BLUE)
-            self.outline_color = QColor(palette.DARK_TEAL)
-
-        elif get_classname(self.socket_ref.block_ref) == 'FunctionalBlock':
-            self.bg_color = QColor(palette.GREY)
-            self.outline_color = QColor(palette.DARK_ORANGE)
-
-        elif get_classname(self.socket_ref.block_ref) == 'PropertyBlock':
-            self.bg_color = QColor(palette.DARK_ORANGE)
-            self.outline_color = QColor(palette.DARK_ORANGE)
+        """Set socket colors using polymorphic behavior from the block"""
+        socket_colors = self.socket_ref.block_ref.get_socket_colors()
+        self.bg_color = QColor(socket_colors["bg_color"])
+        self.outline_color = QColor(socket_colors["outline_color"])
 
     def paint(self, painter: QPainter, option: 'QStyleOptionGraphicsItem', widget=None) -> None:
         painter.setBrush(self._brush)
