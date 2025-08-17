@@ -17,7 +17,7 @@ readme = "README.md"
 # language names and file patterns.
 
 [project.entry-points."pygments.lexers"]
-vse_lexer = "vse_lexer:ExternalLexer"
+external = "external:ExternalLexer"
 
 # Declare plugin styles in this table. The key *is* significant: it is the name
 # the style will be recognized as. In this example, we can use
@@ -51,4 +51,4 @@ vse-style = "vse_style:VSE"
 #test = "pygmentize -l python style=vse-style"
 
 [tool.hatch.build.targets.wheel]
-packages = ["vse_style.py", "vse_lexer.py"]
+packages = ["vse_style.py", "external.py"]
