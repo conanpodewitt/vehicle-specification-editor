@@ -3,22 +3,6 @@ import os
 import json
 import sys
 
-def get_vehicle_type(dtype: str) -> str:
-    """
-    Get the vehicle type based on the dtype.
-    :param dtype: Data type of the numpy array.
-    :return: Vehicle type as a string.
-    """
-    if dtype == 'ubyte':
-        return "NatTensor"
-    elif dtype == 'byte' or dtype == '>i2' or dtype == '>i4':
-        return "IntTensor"
-    elif dtype == '>f4' or dtype == '>f8':
-        return "RatTensor"
-    else:
-        raise ValueError(f"Unsupported data type: {dtype}")
-    
-
 # Convert to tensor and provide as JSON
 def convert_to_tensor(ndarr) -> dict:
     """
@@ -27,13 +11,11 @@ def convert_to_tensor(ndarr) -> dict:
     :return: JSON representation of the tensor.
     The JSON format is:
     {
-        "type": "NatTensor" | "IntTensor" | "RatTensor",
         "shape": [dim1, dim2, ...],
         "data": ndarr
     }
     """
     return {
-        "type": get_vehicle_type(ndarr.dtype),
         "shape": ndarr.shape,
         "data": ndarr
     }
@@ -46,6 +28,8 @@ def decode_idx(filename : str) -> dict:
     Decode IDX file and convert it to numpy array.
     :param filename: Path to the IDX file."""
     ndarr = idx2numpy.convert_from_file(filename)
+
+    # print(ndarr.dtype)
 
     tensor_json = convert_to_tensor(ndarr)
     # print(tensor_json)
