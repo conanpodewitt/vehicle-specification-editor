@@ -10,6 +10,7 @@ This module contains the base classes for the node editor framework:
 
 from typing import Any
 from enum import Enum
+from .styling import dimension as dim
 
 
 # Core enumerations
@@ -40,8 +41,11 @@ class Block:
         self.id = None
         self.title = "Block"
         self.scene_ref = None
-        self.block_graphics = None  # Reference to BlockGraphics instance
+        self.graphics = None  # Reference to BlockGraphics instance
+        self.block_graphics = None  # Legacy reference to BlockGraphics instance
         self.sockets = []
+        self.inputs = []   # Input sockets
+        self.outputs = []  # Output sockets
         self.attr_dict = {'parameters': {}}
         self.x = 0
         self.y = 0
@@ -63,7 +67,7 @@ class Block:
     def get_block_width(self):
         """Return the width for this block type"""
         # Default width - subclasses can override
-        return 180  # Default from dimension constants
+        return dim.BLOCK_BASE_WIDTH
     
     def update_edges(self):
         """Update connected edges when block moves"""
@@ -83,7 +87,8 @@ class Socket:
     def __init__(self, socket_type, block):
         self.s_type = socket_type
         self.block_ref = block
-        self.socket_graphics = None  # Reference to SocketGraphics instance
+        self.graphics = None  # Reference to SocketGraphics instance
+        self.socket_graphics = None  # Legacy reference to SocketGraphics instance
         self.edges = []  # List of connected edges
 
 
@@ -94,7 +99,8 @@ class Edge:
         self.start_skt = start_socket
         self.end_skt = end_socket
         self.view_dim = True
-        self.edge_graphics = None  # Reference to EdgeGraphics instance
+        self.graphics = None  # Reference to EdgeGraphics instance
+        self.edge_graphics = None  # Legacy reference to EdgeGraphics instance
         
         # Add this edge to the sockets
         start_socket.edges.append(self)
