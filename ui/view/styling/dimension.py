@@ -35,10 +35,10 @@ ZOOM_RANGE = [0, 10]
 # Blocks
 # ------------
 
-# Width values
-BLOCK_BASE_WIDTH = 90
-BLOCK_PARAM_WIDTH = 200
-BLOCK_PROPERTY_WIDTH = 150
+# Width values - All blocks now have the same width for consistency
+BLOCK_BASE_WIDTH = 180
+BLOCK_PARAM_WIDTH = 180
+BLOCK_PROPERTY_WIDTH = 180
 
 # Height values
 BLOCK_BASE_HEIGHT = 35
@@ -59,3 +59,16 @@ SCENE_BORDER = 4600
 # Parameters
 SOCKET_RADIUS = 2  # Reduced from 6 to make it like a small dot
 SOCKET_OUTLINE = 1  # Reduced outline to match smaller socket
+
+# Verification Workflow Layout
+# ------------
+
+# Hierarchical tree layout spacing
+PROPERTY_SPACING_Y = 600    # Vertical spacing between properties (changed from horizontal)
+PROPERTY_X = -400           # X position for all properties (fixed horizontal position)
+QUERY_Y_OFFSET = 200        # Vertical offset for queries below properties
+WITNESS_Y_OFFSET = 200      # Vertical offset for witnesses below queries
+QUERY_SPACING = 200         # Horizontal spacing between queries under same property (increased from 180)
+
+# Starting position for workflow
+WORKFLOW_START_Y = -300     # Starting Y position for first property

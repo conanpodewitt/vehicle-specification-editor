@@ -25,15 +25,11 @@ class PropertyBlock(Block):
         elif self.verification_status == "disproven":
             return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
         else:  # unknown
-            return ["#304153", "#34475b", "#34475b", "#304153", "#2c2c2c"]  # Blue
+            return ["#B7950B", "#D4AC0D", "#D4AC0D", "#B7950B", "#2c2c2c"]  # Dull Yellow
     
     def get_socket_colors(self):
         """Return socket colors for property blocks"""
-        return {"bg_color": "#FF8800", "outline_color": "#FF8800"}  # Orange
-    
-    def get_block_width(self):
-        """Return width for property blocks"""
-        return 220  # Property blocks are wider to show formulas
+        return {"bg_color": "#D4AC0D", "outline_color": "#B7950B"}  # Dull Yellow
 
 
 class QueryBlock(Block):
@@ -54,11 +50,11 @@ class QueryBlock(Block):
         elif self.verification_status == "disproven":
             return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
         else:  # unknown
-            return ["#808080", "#CCCCCC", "#CCCCCC", "#808080", "#2c2c2c"]  # Grey
+            return ["#B7950B", "#D4AC0D", "#D4AC0D", "#B7950B", "#2c2c2c"]  # Dull Yellow
     
     def get_socket_colors(self):
         """Return socket colors for query blocks"""
-        return {"bg_color": "#CCCCCC", "outline_color": "#808080"}  # Grey
+        return {"bg_color": "#D4AC0D", "outline_color": "#B7950B"}  # Dull Yellow
 
 
 class WitnessBlock(Block):
@@ -73,13 +69,13 @@ class WitnessBlock(Block):
     def get_color_scheme(self):
         """Return color scheme based on counterexample vs witness"""
         if self.is_counterexample:
-            return ["#D35400", "#E67E22", "#E67E22", "#D35400", "#2c2c2c"]  # Orange
+            return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
         else:
             return ["#105555", "#157172", "#157172", "#105555", "#2c2c2c"]  # Teal
     
     def get_socket_colors(self):
         """Return socket colors for witness blocks"""
         if self.is_counterexample:
-            return {"bg_color": "#E67E22", "outline_color": "#D35400"}  # Orange
+            return {"bg_color": "#E74C3C", "outline_color": "#C0392B"}  # Red
         else:
             return {"bg_color": "#157172", "outline_color": "#105555"}  # Teal
