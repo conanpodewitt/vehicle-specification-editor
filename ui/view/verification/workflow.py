@@ -211,7 +211,6 @@ class VerificationWorkflowGenerator:
         self._create_socket_graphics(block, graphics)
         # Store reference for edge creation and block updates
         block.graphics = graphics
-        block.block_graphics = graphics  # Also set the legacy reference
         
         # TODO: Add auto-scrolling logic here
         return graphics
@@ -230,7 +229,6 @@ class VerificationWorkflowGenerator:
             socket_y = -dim.SOCKET_RADIUS
             socket_graphics.setPos(socket_x, socket_y)
             socket.graphics = socket_graphics
-            socket.socket_graphics = socket_graphics  # Also set the legacy reference
             
         # Create output socket graphics (bottom center of block)
         for socket in block.outputs:
@@ -241,7 +239,6 @@ class VerificationWorkflowGenerator:
             socket_y = graphics.height - dim.SOCKET_RADIUS
             socket_graphics.setPos(socket_x, socket_y)
             socket.graphics = socket_graphics
-            socket.socket_graphics = socket_graphics  # Also set the legacy reference
     
     def _connect_blocks(self, source_block, target_block):
         """Create an edge connection between two blocks"""
@@ -254,7 +251,6 @@ class VerificationWorkflowGenerator:
             
             self.graphics_scene.addItem(edge_graphics)
             edge.graphics = edge_graphics
-            edge.edge_graphics = edge_graphics  # Also set the legacy reference
             
             # Use the edge's own positioning logic for consistent vertical anchors
             edge.update_graphics_position()

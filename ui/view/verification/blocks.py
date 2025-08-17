@@ -5,22 +5,43 @@ This module contains verification-specific block types for the node editor.
 
 """
 
-from ..base_types import Block, Status
+from enum import Enum
+from ..base_types import Block
+
+
+class BlockType(Enum):
+    """Block type enumeration"""
+    PROPERTY = 0
+    QUERY = 1
+    WITNESS = 2
+
+
+class Status(Enum):
+    """Verification status enumeration"""
+    VERIFIED = 0
+    DISPROVEN = 1
+    UNKNOWN = 2
+
+
+class PropertyQuantifier(Enum):
+    """Property quantifier enumeration"""
+    FOR_ALL = 0
+    EXISTS = 1
 
 
 class PropertyBlock(Block):
     """Block representing a high-level verification property"""
-    def __init__(self, property_type="for_all", formula="", title="Property"):
+    def __init__(self, property_type=PropertyQuantifier.FOR_ALL, formula="", title="Property"):
         super().__init__()
         self.title = title
-        self.property_type = property_type  # "for_all" or "exists"
+        self.property_type = property_type  # FOR_ALL or EXISTS
         self.formula = formula
-        self.verification_status = "unknown"  # "verified", "disproven", "unknown"
+        self.verification_status = Status.UNKNOWN  
         self.queries = []  # List of associated queries
     
     def get_color_scheme(self):
         """Return color scheme based on verification status"""
-        if self.verification_status == "verified":
+        if self.verification_status == Status.VERIFIED:
             return ["#1E8449", "#27AE60", "#27AE60", "#1E8449", "#2c2c2c"]  # Green
         elif self.verification_status == "disproven":
             return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
@@ -40,14 +61,14 @@ class QueryBlock(Block):
         self.query_id = query_id
         self.query_text = query_text
         self.is_negated = is_negated  # True for 'for all' properties
-        self.verification_status = "unknown"  # "verified", "disproven", "unknown"
+        self.verification_status = Status.UNKNOWN 
         self.property_ref = None  # Reference to parent property
     
     def get_color_scheme(self):
         """Return color scheme based on verification status"""
-        if self.verification_status == "verified":
+        if self.verification_status == Status.VERIFIED:
             return ["#1E8449", "#27AE60", "#27AE60", "#1E8449", "#2c2c2c"]  # Green
-        elif self.verification_status == "disproven":
+        elif self.verification_status == Status.DISPROVEN:
             return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
         else:  # unknown
             return ["#B7950B", "#D4AC0D", "#D4AC0D", "#B7950B", "#2c2c2c"]  # Dull Yellow

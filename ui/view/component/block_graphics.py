@@ -108,7 +108,7 @@ class BlockGraphics(QGraphicsItem):
         super().mouseMoveEvent(event)
 
         for block in self.block_ref.scene_ref.blocks.values():
-            if block.block_graphics.isSelected():
+            if block.graphics.isSelected():
                 block.update_edges()
 
         self.block_ref.update_edges()
