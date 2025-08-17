@@ -27,8 +27,7 @@ class HeirarchicalOutput(QWidget):
         self.graphics_view = GraphicsView(self.graphics_scene)
         layout.addWidget(self.graphics_view)
         
-        # Create the workflow generator
-        self.workflow_generator = VerificationWorkflowGenerator(self.graphics_scene)
+        self.workflow_generator = VerificationWorkflowGenerator(self.graphics_scene, self.graphics_view)
         
         # Generate the initial workflow
         self.create_verification_workflow()
@@ -36,7 +35,7 @@ class HeirarchicalOutput(QWidget):
     def clear(self):
         """Clear and recreate the verification workflow"""
         self.graphics_scene.clear()
-        self.workflow_generator = VerificationWorkflowGenerator(self.graphics_scene)
+        self.workflow_generator = VerificationWorkflowGenerator(self.graphics_scene, self.graphics_view)
         self.create_verification_workflow()
     
     def create_verification_workflow(self):
@@ -49,3 +48,16 @@ class HeirarchicalOutput(QWidget):
         """Load verification workflow from structured data"""
         self.clear()
         self.workflow_generator.create_workflow_from_data(verification_data)
+    
+    def add_streaming_verification_update(self, update_type, update_data):
+        """Add a real-time verification update and auto-scroll to show it
+        
+        This method would be called when new verification results stream in.
+        
+        Args:
+            update_type: 'property', 'query', or 'witness'  
+            update_data: Dictionary containing the update information
+        """
+        new_block = self.workflow_generator.add_streaming_update(update_type, update_data)
+        
+        return new_block
