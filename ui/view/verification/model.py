@@ -34,7 +34,6 @@ class VerificationScene(Scene):
     def _setup_block(self, block, x, y, socket_types):
         """Setup a block with position, sockets, and scene reference"""
         block.x, block.y = x, y
-        block.attr_dict = {'parameters': {}}
         block.sockets = [VerificationSocket(st, block) for st in socket_types]
         
         # Setup input/output socket lists
@@ -76,11 +75,11 @@ class VerificationEdge(Edge):
     
     def update_graphics_position(self):
         """Update the graphics position of this verification edge for hierarchical layout"""
-        if self.edge_graphics and self.start_skt.block_ref.block_graphics and self.end_skt.block_ref.block_graphics:
-            start_pos = self.start_skt.block_ref.block_graphics.pos()
-            end_pos = self.end_skt.block_ref.block_graphics.pos()
-            start_graphics = self.start_skt.block_ref.block_graphics
-            end_graphics = self.end_skt.block_ref.block_graphics
+        if self.graphics and self.start_skt.block_ref.graphics and self.end_skt.block_ref.graphics:
+            start_pos = self.start_skt.block_ref.graphics.pos()
+            end_pos = self.end_skt.block_ref.graphics.pos()
+            start_graphics = self.start_skt.block_ref.graphics
+            end_graphics = self.end_skt.block_ref.graphics
             
             # Source socket is at bottom center of source block
             start_x = start_pos.x() + start_graphics.width / 2
@@ -90,10 +89,10 @@ class VerificationEdge(Edge):
             end_x = end_pos.x() + end_graphics.width / 2
             end_y = end_pos.y()
             
-            self.edge_graphics.src_pos = [start_x, start_y]
-            self.edge_graphics.dest_pos = [end_x, end_y]
-            self.edge_graphics.update_path()
+            self.graphics.src_pos = [start_x, start_y]
+            self.graphics.dest_pos = [end_x, end_y]
+            self.graphics.update_path()
             
             # Force graphics updates to ensure the edge is rendered correctly
-            self.edge_graphics.update()
-            self.edge_graphics.prepareGeometryChange()
+            self.graphics.update()
+            self.graphics.prepareGeometryChange()

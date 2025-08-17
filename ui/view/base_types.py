@@ -1,10 +1,7 @@
 """
 Module base_types.py
 
-This module contains the base classes for the node editor framework:
-- Base block, socket, edge, and scene classes
-- Core enumerations
-- Utility functions
+This module contains the base classes for the node editor framework.
 
 """
 
@@ -20,20 +17,6 @@ class SocketType(Enum):
     OUTPUT = 1
 
 
-class BlockType(Enum):
-    """Block type enumeration"""
-    PROPERTY = 0
-    QUERY = 1
-    WITNESS = 2
-
-
-class Status(Enum):
-    """Verification status enumeration"""
-    VERIFIED = 0
-    DISPROVEN = 1
-    UNKNOWN = 2
-
-
 # Base classes
 class Block:
     """Base block class for all node types"""
@@ -42,11 +25,8 @@ class Block:
         self.title = "Block"
         self.scene_ref = None
         self.graphics = None  # Reference to BlockGraphics instance
-        self.block_graphics = None  # Legacy reference to BlockGraphics instance
-        self.sockets = []
         self.inputs = []   # Input sockets
         self.outputs = []  # Output sockets
-        self.attr_dict = {'parameters': {}}
         self.x = 0
         self.y = 0
     

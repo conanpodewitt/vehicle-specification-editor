@@ -48,16 +48,3 @@ class HeirarchicalOutput(QWidget):
         """Load verification workflow from structured data"""
         self.clear()
         self.workflow_generator.create_workflow_from_data(verification_data)
-    
-    def add_streaming_verification_update(self, update_type, update_data):
-        """Add a real-time verification update and auto-scroll to show it
-        
-        This method would be called when new verification results stream in.
-        
-        Args:
-            update_type: 'property', 'query', or 'witness'  
-            update_data: Dictionary containing the update information
-        """
-        new_block = self.workflow_generator.add_streaming_update(update_type, update_data)
-        
-        return new_block
