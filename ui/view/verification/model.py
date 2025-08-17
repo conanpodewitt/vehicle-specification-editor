@@ -36,6 +36,11 @@ class VerificationScene(Scene):
         block.x, block.y = x, y
         block.attr_dict = {'parameters': {}}
         block.sockets = [VerificationSocket(st, block) for st in socket_types]
+        
+        # Setup input/output socket lists
+        block.inputs = [s for s in block.sockets if s.s_type == SocketType.INPUT]
+        block.outputs = [s for s in block.sockets if s.s_type == SocketType.OUTPUT]
+        
         block.has_parameters = lambda: False
         
         def update_edges():
@@ -70,16 +75,25 @@ class VerificationEdge(Edge):
     """Edge class specifically for verification workflows"""
     
     def update_graphics_position(self):
-        """Update the graphics position of this verification edge"""
+        """Update the graphics position of this verification edge for hierarchical layout"""
         if self.edge_graphics and self.start_skt.block_ref.block_graphics and self.end_skt.block_ref.block_graphics:
             start_pos = self.start_skt.block_ref.block_graphics.pos()
             end_pos = self.end_skt.block_ref.block_graphics.pos()
+            start_graphics = self.start_skt.block_ref.block_graphics
+            end_graphics = self.end_skt.block_ref.block_graphics
             
-            start_x = start_pos.x() + self.start_skt.block_ref.block_graphics.width - dim.SOCKET_RADIUS
-            start_y = start_pos.y() + self.start_skt.block_ref.block_graphics.height // 2
-            end_x = end_pos.x() + dim.SOCKET_RADIUS
-            end_y = end_pos.y() + self.end_skt.block_ref.block_graphics.height // 2
+            # Source socket is at bottom center of source block
+            start_x = start_pos.x() + start_graphics.width / 2
+            start_y = start_pos.y() + start_graphics.height
+            
+            # Target socket is at top center of target block  
+            end_x = end_pos.x() + end_graphics.width / 2
+            end_y = end_pos.y()
             
             self.edge_graphics.src_pos = [start_x, start_y]
             self.edge_graphics.dest_pos = [end_x, end_y]
             self.edge_graphics.update_path()
+            
+            # Force graphics updates to ensure the edge is rendered correctly
+            self.edge_graphics.update()
+            self.edge_graphics.prepareGeometryChange()
