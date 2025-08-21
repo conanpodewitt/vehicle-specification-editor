@@ -63,7 +63,7 @@ class BlockGraphics(QGraphicsItem):
         """
 
         self.title_item.setDefaultTextColor(QColor(palette.WHITE))
-        self.title_item.setFont(QFont('Arial', 10))
+        self.title_item.setFont(QFont(dim.FONT_FAMILY, dim.FONT_SIZE))
         self.title_item.setPos(dim.TITLE_PAD, 0)
         self.title_item.setPlainText(self.block_ref.title)
         self.title_item.setTextWidth(self.width - 2 * dim.TITLE_PAD)

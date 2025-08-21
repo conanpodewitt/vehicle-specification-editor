@@ -10,9 +10,10 @@ Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 # Scene
 # ------------
 
-# Width and height
-SCENE_WIDTH = 12800
-SCENE_HEIGHT = 6400
+# Minimum scene dimensions
+INITIAL_SCENE_WIDTH = 800
+INITIAL_SCENE_HEIGHT = 600
+SCENE_PADDING = 200
 
 # Window size
 WINDOW_WIDTH = 1024
@@ -51,6 +52,11 @@ SOCKET_SPACING = 22
 NEXT_BLOCK_DISTANCE = 200
 SCENE_BORDER = 4600
 
+# Font
+FONT_FAMILY = "Arial"
+FONT_SIZE = 8
+FONT_BOLD = True
+
 # Sockets
 # ------------
 
@@ -62,9 +68,9 @@ SOCKET_OUTLINE = 1
 # ------------
 
 # Hierarchical tree layout spacing
-VERTICAL_SPACING = 150      # Vertical spacing between blocks
+VERTICAL_SPACING = 100      # Vertical spacing between blocks
 HORIZONTAL_SPACING = 150    # Horizontal spacing between blocks
-PROPERTY_SPACING_Y = 500    # Vertical spacing between properties
+PROPERTY_SPACING_Y = 300    # Vertical spacing between properties
 PROPERTY_X = -400           # X position for properties
 
 # Starting position for workflow
