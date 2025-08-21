@@ -22,14 +22,14 @@ class Block:
     """Base block class for all node types"""
     def __init__(self):
         self.id = None
-        self.title = "Block"
-        self.scene_ref = None
-        self.graphics = None  # Reference to BlockGraphics instance
-        self.inputs = []   # Input sockets
-        self.outputs = []  # Output sockets
-        self.x = 0
+        self.title = "Block"    
+        self.scene_ref = None           # Reference to the scene this block belongs to
+        self.graphics = None            # Reference to BlockGraphics instance
+        self.inputs = []                # Input sockets
+        self.outputs = []               # Output sockets
+        self.x = 0                      
         self.y = 0
-    
+
     def has_parameters(self):
         """Required method for GraphicsBlock"""
         return False
@@ -88,7 +88,27 @@ class Edge:
     
     def update_graphics_position(self):
         """Update the graphics position of this edge"""
-        raise NotImplementedError("Subclasses must implement update_graphics_position")
+        if self.graphics and self.start_skt.block_ref.graphics and self.end_skt.block_ref.graphics:
+            start_pos = self.start_skt.block_ref.graphics.pos()
+            end_pos = self.end_skt.block_ref.graphics.pos()
+            start_graphics = self.start_skt.block_ref.graphics
+            end_graphics = self.end_skt.block_ref.graphics
+            
+            # Source socket is at bottom center of source block
+            start_x = start_pos.x() + start_graphics.width / 2
+            start_y = start_pos.y() + start_graphics.height
+            
+            # Target socket is at top center of target block  
+            end_x = end_pos.x() + end_graphics.width / 2
+            end_y = end_pos.y()
+            
+            self.graphics.src_pos = [start_x, start_y]
+            self.graphics.dest_pos = [end_x, end_y]
+            self.graphics.update_path()
+            
+            # Force graphics updates to ensure the edge is rendered correctly
+            self.graphics.update()
+            self.graphics.prepareGeometryChange()
 
 
 class Scene:
@@ -107,8 +127,15 @@ class Scene:
         return block
     
     def connect_blocks(self, source_block, target_block):
-        """Connect two blocks with an edge"""
-        raise NotImplementedError("Subclasses must implement connect_blocks")
+        """Connect two blocks in the verification workflow"""
+        source_socket = next((s for s in source_block.sockets if s.s_type == SocketType.OUTPUT), None)
+        target_socket = next((s for s in target_block.sockets if s.s_type == SocketType.INPUT), None)
+        
+        if source_socket and target_socket:
+            edge = Edge(source_socket, target_socket)
+            self.edges[edge.id] = edge
+            return edge
+        return None
 
 
 # Utility functions
