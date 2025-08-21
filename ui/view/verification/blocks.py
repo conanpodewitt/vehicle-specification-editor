@@ -42,7 +42,7 @@ class PropertyBlock(Block):
         """Return color scheme based on verification status"""
         if self.verification_status == Status.VERIFIED:
             return ["#1E8449", "#27AE60", "#27AE60", "#1E8449", "#2c2c2c"]  # Green
-        elif self.verification_status == "disproven":
+        elif self.verification_status == Status.DISPROVEN:
             return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
         else:  # unknown
             return ["#B7950B", "#D4AC0D", "#D4AC0D", "#B7950B", "#2c2c2c"]  # Dull Yellow
@@ -54,9 +54,12 @@ class PropertyBlock(Block):
 
 class QueryBlock(Block):
     """Block representing a verification query"""
-    def __init__(self, property_block, title=None, is_negated=False):
+    def __init__(self, id, property_block, title=None, is_negated=False):
         super().__init__()
-        self.title = title
+        self.id = id
+        self.title = title or f"Query {id}"
+        if is_negated:
+            self.title = f"¬{self.title}"
         self.is_negated = is_negated  # True for 'for all' properties
         self.verification_status = Status.UNKNOWN
         self.property_ref = property_block  # Reference to parent property
