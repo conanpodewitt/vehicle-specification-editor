@@ -7,7 +7,7 @@ Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 
-from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtCore import Qt, QTimer, QPointF, QRectF, QPropertyAnimation, QObject, QEvent
 from PyQt6.QtGui import QPainter, QMouseEvent
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QGraphicsView
@@ -41,9 +41,9 @@ class GraphicsView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
         # Enable scrollbars
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-    
+        self.h_scrollbar = self.horizontalScrollBar()
+        self.v_scrollbar = self.verticalScrollBar()
+
     def zoom_in(self):
         self.zoom += dim.ZOOM_STEP
         self.set_scale(dim.ZOOM_IN_FACTOR)
@@ -132,3 +132,52 @@ class GraphicsView(QGraphicsView):
             self.zoom -= dim.ZOOM_STEP
 
         self.set_scale(factor)
+
+    def scroll_item_into_view(self, item, margin_scene=20.0):
+        """
+        Ensure `item` is fully visible in `view`.
+        - Pans horizontally if the item is out of view horizontally.
+        - Pans vertically if the item is out of view vertically.
+        - `margin_scene` is in scene units (zoom-independent).
+        - If `animate=True`, does a short smooth pan (assumes scale-only transform).
+        """
+        def _do():
+            # Item bounds in scene coords
+            item_rect: QRectF = item.mapToScene(item.boundingRect()).boundingRect()
+            view_rect: QRectF = self.mapToScene(self.viewport().rect()).boundingRect()
+
+            dx = 0.0
+            dy = 0.0
+
+            # Horizontal adjustment
+            if item_rect.left() - margin_scene < view_rect.left():
+                dx = (item_rect.left() - margin_scene) - view_rect.left()
+            elif item_rect.right() + margin_scene > view_rect.right():
+                dx = (item_rect.right() + margin_scene) - view_rect.right()
+
+            # Vertical adjustment
+            if item_rect.top() - margin_scene < view_rect.top():
+                dy = (item_rect.top() - margin_scene) - view_rect.top()
+            elif item_rect.bottom() + margin_scene > view_rect.bottom():
+                dy = (item_rect.bottom() + margin_scene) - view_rect.bottom()
+
+            if dx == 0.0 and dy == 0.0:
+                return
+
+            # Compute target viewport rect
+            new_left   = view_rect.left() + dx
+            new_top    = view_rect.top() + dy
+            new_width  = view_rect.width()
+            new_height = view_rect.height()
+
+            # Clamp to scene
+            scene_rect = self.sceneRect()
+            if scene_rect.isValid():
+                new_left = max(scene_rect.left(), min(new_left, scene_rect.right() - new_width))
+                new_top  = max(scene_rect.top(),  min(new_top,  scene_rect.bottom() - new_height))
+
+            # Convert to a target center and pan
+            target_center = QPointF(new_left + new_width / 2.0, new_top + new_height / 2.0)
+            self.centerOn(target_center)
+
+        QTimer.singleShot(0, _do)    

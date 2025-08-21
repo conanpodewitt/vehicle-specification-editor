@@ -21,14 +21,14 @@ class VerificationWorkflowGenerator:
     def __init__(self, graphics_scene, graphics_view=None):
         self.scene = VerificationScene()
         self.graphics_scene = graphics_scene
-        self.graphics_view = graphics_view  # Reference to graphics view for auto-scrolling
+        self.graphics_view = graphics_view 
         
         # Starting position and counter for layout
         self.property_counter = 0       
         
         # Track positions for hierarchical layout
-        self.properties = []  #
-        self.property_query_positions = {}    
+        self.properties = []  
+        self.property_info = {}    
     
     def add_property(self, property_type, formula, title=None):
         """Add a property block with vertical hierarchical positioning"""
@@ -36,7 +36,7 @@ class VerificationWorkflowGenerator:
             title = f"Property ({property_type})"
         
         # Properties are positioned vertically, queries spread horizontally under each
-        property_x = dim.PROPERTY_X  # Fixed X position for all properties
+        property_x = dim.PROPERTY_X
         property_y = dim.WORKFLOW_START_Y + (self.property_counter * dim.PROPERTY_SPACING_Y)
         
         # Create the property at the calculated position
@@ -44,22 +44,16 @@ class VerificationWorkflowGenerator:
             property_type, formula, property_x, property_y
         )
         property_block.title = title
-        
-        # Initialize query tracking for this property  
-        self.property_query_positions[property_block.id] = {
-            'property_x': property_x,  # Store property position for centering queries
-            'query_count': 0,
+        self.property_info[property_block.id] = {
+            'property_x': property_x, 
             'queries': [],
             'witnesses': []
         }
-        
-        # Track properties and increment counter
         self.properties.append(property_block)
         self.property_counter += 1
-        
-        # Create graphics
+
         self._create_graphics_block(property_block)
-        
+        self.graphics_view.scroll_item_into_view(property_block.graphics)
         return property_block
     
     def add_query(self, property_block, query_id, query_text, is_negated=False, title=None):
@@ -68,42 +62,32 @@ class VerificationWorkflowGenerator:
             title = f"{'¬' if is_negated else ''}Query {query_id}"
         
         # Get the property's query tracking info
-        prop_info = self.property_query_positions[property_block.id]
+        prop_info = self.property_info[property_block.id]
         current_queries = prop_info['queries']
-        center_x = prop_info['property_x']
-        
-        # New approach: Don't reposition existing queries, just add to the right
+
+        # Set query (X, Y) coordinates
+        query_y = property_block.y + dim.VERTICAL_SPACING
         if len(current_queries) == 0:
-            # First query: position under the property
-            query_x = center_x 
+            query_x = prop_info['property_x'] 
         else:
-            # Subsequent queries: position to the right of the rightmost existing query
-            rightmost_query = max(current_queries, key=lambda q: q.x)
-            query_x = rightmost_query.x + dim.QUERY_SPACING
-        
-        # Queries are positioned below their property
-        query_y = property_block.y + dim.QUERY_Y_OFFSET
-        
+            query_x = current_queries[-1].x + dim.HORIZONTAL_SPACING
+
         # Create the query block
         query_block = self.scene.add_query_block(
             query_id, query_text, is_negated, query_x, query_y
         )
         query_block.title = title
         query_block.property_ref = property_block
-        
-        # Update tracking
-        prop_info['query_count'] += 1
         prop_info['queries'].append(query_block)
         property_block.queries.append(query_block)
         
         # Create graphics and connection
         self._create_graphics_block(query_block)
         self._connect_blocks(property_block, query_block)
-        
-        # Since we're not repositioning existing queries, we only need to update edges for the new query
-        if hasattr(query_block, 'update_edges'):
-            query_block.update_edges()
-        
+        query_block.update_edges()
+
+        # Update scrollbar
+        self.graphics_view.scroll_item_into_view(query_block.graphics)
         return query_block
     
     def add_witness(self, query_block, is_counterexample=False, witness_data=None, title=None):
@@ -113,7 +97,7 @@ class VerificationWorkflowGenerator:
         
         # Position witness directly below the query (hierarchical tree structure)
         witness_x = query_block.x
-        witness_y = query_block.y + dim.WITNESS_Y_OFFSET
+        witness_y = query_block.y + dim.VERTICAL_SPACING
         
         # Create the witness block
         witness_block = self.scene.add_witness_block(
@@ -121,26 +105,16 @@ class VerificationWorkflowGenerator:
         )
         witness_block.title = title
         witness_block.query_ref = query_block
-        
-        # Update tracking
-        prop_info = self.property_query_positions[query_block.property_ref.id]
+        prop_info = self.property_info[query_block.property_ref.id]
         prop_info['witnesses'].append(witness_block)
         
         # Create graphics and connection
         self._create_graphics_block(witness_block)
         self._connect_blocks(query_block, witness_block)
-        
-        # Force graphics update to ensure witness is positioned correctly
-        if hasattr(witness_block, 'graphics') and witness_block.graphics:
-            witness_block.graphics.setPos(witness_x, witness_y)
-            witness_block.graphics.update()
-        
-        # Update connected edges after positioning
-        if hasattr(witness_block, 'update_edges'):
-            witness_block.update_edges()
-        if hasattr(query_block, 'update_edges'):
-            query_block.update_edges()
-        
+        witness_block.update_edges()
+        query_block.update_edges()
+
+        self.graphics_view.scroll_item_into_view(witness_block.graphics)
         return witness_block
     
     def clear_workflow(self):
@@ -149,7 +123,7 @@ class VerificationWorkflowGenerator:
         self.scene = VerificationScene()
         self.property_counter = 0
         self.properties = []
-        self.property_query_positions = {}
+        self.property_info = {}
     
     def get_workflow_bounds(self):
         """Get the bounding rectangle of the current workflow"""
