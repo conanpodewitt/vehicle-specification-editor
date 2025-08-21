@@ -6,7 +6,10 @@ that creates verification graphs from data.
 
 """
 
-from .blocks import PropertyBlock, WitnessBlock, QueryBlock, PropertyQuantifier
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPen, QColor, QBrush
+
+from .blocks import PropertyBlock, WitnessBlock, QueryBlock, PropertyQuantifier, Status
 from ..base_types import Scene, Socket
 from ..graphics_view import GraphicsView
 from ..component.block_graphics import BlockGraphics
@@ -52,11 +55,8 @@ class VerificationWorkflow:
         self.graphics_view.scroll_item_into_view(property_block.graphics)
         return property_block
     
-    def add_query(self, property_block, is_negated=False, title=None):
+    def add_query(self, id, property_block, is_negated=False, title=None):
         """Add a query block connected to a property with hierarchical positioning"""
-        if title is None:
-            title = f"{'¬' if is_negated else ''}Query"
-
         # Get the property's query tracking info
         prop_info = self.property_info[property_block.title]
         current_queries = prop_info['queries']
@@ -69,7 +69,7 @@ class VerificationWorkflow:
             query_x = current_queries[-1].x + dim.HORIZONTAL_SPACING
 
         # Create the query block
-        query_block = QueryBlock(property_block, title, is_negated)
+        query_block = QueryBlock(id, property_block, title, is_negated)
         self._setup_block(query_block, query_x, query_y, [SocketType.INPUT, SocketType.OUTPUT])
         prop_info['queries'].append(query_block)
         property_block.queries.append(query_block)
@@ -126,36 +126,37 @@ class VerificationWorkflow:
         max_y = max(block.y + dim.BLOCK_BASE_HEIGHT for block in self.scene.blocks.values())
         
         return (min_x, min_y, max_x - min_x, max_y - min_y)
-    
-    def create_example_workflow(self):
-        """Create an example verification workflow using hierarchical tree layout"""
-        # Clear any existing workflow
-        self.clear_workflow()
-        
-        # Property 1: For-all property with two queries and a counterexample
-        property1 = self.add_property(PropertyQuantifier.FOR_ALL)
-        query1 = self.add_query(property1, True)
-        _ = self.add_query(property1, True)
-        _ = self.add_witness(query1)
-        
-        # Property 2: Exists property with one query and a witness
-        property2 = self.add_property(PropertyQuantifier.EXISTS)
-        query3 = self.add_query(property2, False)
-        _ = self.add_witness(query3)
-        
-        # Property 3: Another for-all property to demonstrate the hierarchical structure
-        property3 = self.add_property(PropertyQuantifier.FOR_ALL)
-        query4 = self.add_query(property3, True)
-        _ = self.add_query(property3, True)
-        query6 = self.add_query(property3, True)
-        _ = self.add_witness(query4)
-        _ = self.add_witness(query6)
 
-        # Force update all edge positions after workflow creation is complete
-        self._update_edge_positions()
-        
-        return [property1, property2, property3]
+    def update_status(self, query_block: QueryBlock, status: Status):
+        """Update verification status of a query and its parent property, then repaint"""
+        query_block.verification_status = status
+        property_block = query_block.property_ref
+        property_type = property_block.property_type
+
+        if property_type == PropertyQuantifier.FOR_ALL and status == Status.DISPROVEN:
+            property_block.verification_status = Status.DISPROVEN
+        elif property_type == PropertyQuantifier.EXISTS and status == Status.VERIFIED:
+            property_block.verification_status = Status.VERIFIED
+            
+        # Repaint the affected blocks to reflect new colors
+        self._repaint_block(query_block)
+        self._repaint_block(property_block)
     
+    def _repaint_block(self, block):
+        """Repaint a block's graphics to reflect updated verification status"""
+        graphics = block.graphics
+        color_scheme = block.get_color_scheme()
+        graphics._pen_default = QPen(QColor(color_scheme[0]))
+        graphics._pen_default.setWidth(2)
+        graphics._pen_hovered = QPen(QColor(color_scheme[1]))
+        graphics._pen_hovered.setWidth(2)
+        graphics._pen_selected = QPen(QColor(color_scheme[2]))
+        graphics._pen_selected.setWidth(3)
+        graphics._pen_selected.setStyle(Qt.PenStyle.DotLine)
+        graphics._brush_title = QBrush(QColor(color_scheme[3]))
+        graphics._brush_background = QBrush(QColor(color_scheme[4]))
+        graphics.update()
+
     def _create_block_graphics(self, block):
         """Create graphics for a block and add to scene"""
         graphics = BlockGraphics(block)
