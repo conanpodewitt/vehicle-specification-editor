@@ -8,15 +8,11 @@ This package contains all verification-specific logic including:
 
 """
 
-from .model import VerificationScene, VerificationSocket, VerificationEdge
-from .workflow import VerificationWorkflowGenerator
+from .workflow import VerificationWorkflow
 from .blocks import PropertyBlock, QueryBlock, WitnessBlock
 
 __all__ = [
-    'VerificationScene',
-    'VerificationSocket', 
-    'VerificationEdge',
-    'VerificationWorkflowGenerator',
+    'VerificationWorkflow',
     'PropertyBlock',
     'QueryBlock',
     'WitnessBlock'

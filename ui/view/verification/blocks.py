@@ -31,11 +31,10 @@ class PropertyQuantifier(Enum):
 
 class PropertyBlock(Block):
     """Block representing a high-level verification property"""
-    def __init__(self, property_type=PropertyQuantifier.FOR_ALL, formula="", title="Property"):
+    def __init__(self, property_type=PropertyQuantifier.FOR_ALL, title="Property"):
         super().__init__()
         self.title = title
         self.property_type = property_type  # FOR_ALL or EXISTS
-        self.formula = formula
         self.verification_status = Status.UNKNOWN  
         self.queries = []  # List of associated queries
     
@@ -55,14 +54,12 @@ class PropertyBlock(Block):
 
 class QueryBlock(Block):
     """Block representing a verification query"""
-    def __init__(self, query_id=1, query_text="", is_negated=False, title=None):
+    def __init__(self, property_block, title=None, is_negated=False):
         super().__init__()
-        self.title = title or f"Query {query_id}"
-        self.query_id = query_id
-        self.query_text = query_text
+        self.title = title
         self.is_negated = is_negated  # True for 'for all' properties
-        self.verification_status = Status.UNKNOWN 
-        self.property_ref = None  # Reference to parent property
+        self.verification_status = Status.UNKNOWN
+        self.property_ref = property_block  # Reference to parent property
     
     def get_color_scheme(self):
         """Return color scheme based on verification status"""
@@ -80,13 +77,12 @@ class QueryBlock(Block):
 
 class WitnessBlock(Block):
     """Block representing verification results (witness/counterexample)"""
-    def __init__(self, is_counterexample=False, witness_data=None, title=None):
+    def __init__(self, query_block, title=None):
         super().__init__()
-        self.is_counterexample = is_counterexample
-        self.witness_data = witness_data or {}
-        self.title = title or ("Counter Example" if is_counterexample else "Witness")
-        self.query_ref = None  # Reference to associated query
-    
+        self.is_counterexample = query_block.is_negated
+        self.title = title or ("Counter Example" if self.is_counterexample else "Witness")
+        self.query_ref = query_block  # Reference to associated query
+
     def get_color_scheme(self):
         """Return color scheme based on counterexample vs witness"""
         if self.is_counterexample:

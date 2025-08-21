@@ -5,7 +5,7 @@ from pathlib import Path
 # Import high-level node editor components
 from ui.view.graphics_scene import GraphicsScene
 from ui.view.graphics_view import GraphicsView
-from ui.view.verification import VerificationWorkflowGenerator
+from ui.view.verification import VerificationWorkflow
 
 CACHE_LOCATION = os.path.join(os.path.dirname(__file__), "../temp/cache")
 
@@ -26,16 +26,15 @@ class HeirarchicalOutput(QWidget):
         self.graphics_scene = GraphicsScene()
         self.graphics_view = GraphicsView(self.graphics_scene)
         layout.addWidget(self.graphics_view)
-        
-        self.workflow_generator = VerificationWorkflowGenerator(self.graphics_scene, self.graphics_view)
-        
+        self.workflow_generator = VerificationWorkflow(self.graphics_scene, self.graphics_view)
+
         # Generate the initial workflow
         self.create_verification_workflow()
     
     def clear(self):
         """Clear and recreate the verification workflow"""
         self.graphics_scene.clear()
-        self.workflow_generator = VerificationWorkflowGenerator(self.graphics_scene, self.graphics_view)
+        self.workflow_generator = VerificationWorkflow(self.graphics_scene)
         self.create_verification_workflow()
     
     def create_verification_workflow(self):
@@ -43,8 +42,3 @@ class HeirarchicalOutput(QWidget):
         # In the future, this would parse cache files and create a workflow from real data
         # For now, it creates an example workflow
         self.workflow_generator.create_example_workflow()
-    
-    def load_verification_data(self, verification_data):
-        """Load verification workflow from structured data"""
-        self.clear()
-        self.workflow_generator.create_workflow_from_data(verification_data)
