@@ -9,7 +9,7 @@ Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 import math
 
-from PyQt6.QtCore import QLine, pyqtSignal
+from PyQt6.QtCore import QLine, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor, QPen
 from PyQt6.QtWidgets import QGraphicsScene
 
@@ -40,9 +40,14 @@ class GraphicsScene(QGraphicsScene):
         # Reference to the scene (optional)
         self.scene_ref = scene
 
-        # Create the scene rectangle
-        self.scene_width, self.scene_height = dim.SCENE_WIDTH, dim.SCENE_HEIGHT
-        self.setSceneRect(-self.scene_width // 2, -self.scene_height // 2, self.scene_width, self.scene_height)
+        # Start with a smaller initial scene size
+        self.min_scene_width = dim.INITIAL_SCENE_WIDTH
+        self.min_scene_height = dim.INITIAL_SCENE_HEIGHT
+        self.padding = dim.SCENE_PADDING 
+        
+        # Set initial smaller scene rectangle
+        self.setSceneRect(-self.min_scene_width // 2, -self.min_scene_height // 2, 
+                         self.min_scene_width, self.min_scene_height)
 
         self._color_background = QColor(palette.BACKGROUND_GREY)
         self._color_light = QColor(palette.BACKGROUND_LIGHT_LINE_GREY)
@@ -55,6 +60,71 @@ class GraphicsScene(QGraphicsScene):
         self._pen_dark.setWidth(2)
 
         self.setBackgroundBrush(self._color_background)
+        self._size_adjustment_pending = False  # Flag to track size adjustment state
+
+    def auto_adjust_scene_size(self):
+        """Automatically adjust scene size to fit all items with padding"""
+        if not self.items():
+            # No items, keep minimum size
+            self.setSceneRect(-self.min_scene_width // 2, -self.min_scene_height // 2, 
+                             self.min_scene_width, self.min_scene_height)
+            return
+
+        # Calculate the bounding rect of all items
+        items_rect = self.itemsBoundingRect()
+        
+        # Add padding around the content
+        content_left = items_rect.left() - self.padding
+        content_top = items_rect.top() - self.padding
+        content_right = items_rect.right() + self.padding
+        content_bottom = items_rect.bottom() + self.padding
+        
+        # Calculate required dimensions
+        required_width = content_right - content_left
+        required_height = content_bottom - content_top
+        
+        # Ensure minimum size
+        scene_width = max(required_width, self.min_scene_width)
+        scene_height = max(required_height, self.min_scene_height)
+        
+        # Center the scene around the content
+        center_x = (content_left + content_right) / 2
+        center_y = (content_top + content_bottom) / 2
+        
+        # Set new scene rect centered on content
+        new_left = center_x - scene_width / 2
+        new_top = center_y - scene_height / 2
+        
+        self.setSceneRect(new_left, new_top, scene_width, scene_height)
+
+    def addItem(self, item):
+        """Override addItem to auto-adjust scene size"""
+        super().addItem(item)
+        # Defer the size adjustment to avoid performance issues during bulk additions
+        if not self._size_adjustment_pending:
+            self._size_adjustment_pending = True
+            QTimer.singleShot(0, self._perform_size_adjustment)     # Batch size adjustments
+
+    def removeItem(self, item):
+        """Override removeItem to auto-adjust scene size"""
+        super().removeItem(item)
+        # Defer the size adjustment
+        if not self._size_adjustment_pending:
+            self._size_adjustment_pending = True
+            QTimer.singleShot(0, self._perform_size_adjustment)
+
+    def _perform_size_adjustment(self):
+        """Perform the actual size adjustment (called via QTimer)"""
+        if self._size_adjustment_pending:
+            self._size_adjustment_pending = False
+        self.auto_adjust_scene_size()
+
+    def clear(self):
+        """Override clear to reset scene size"""
+        super().clear()
+        # Reset to minimum size when clearing
+        self.setSceneRect(-self.min_scene_width // 2, -self.min_scene_height // 2, 
+                         self.min_scene_width, self.min_scene_height)
 
     def dragMoveEvent(self, event):
         """
