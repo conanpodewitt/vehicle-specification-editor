@@ -55,7 +55,7 @@ class VerificationWorkflow:
         self.graphics_view.scroll_item_into_view(property_block.graphics)
         return property_block
     
-    def add_query(self, id, property_block, is_negated=False, title=None):
+    def add_query(self, id, property_block, query_path, is_negated=False):
         """Add a query block connected to a property with hierarchical positioning"""
         # Get the property's query tracking info
         prop_info = self.property_info[property_block.title]
@@ -69,7 +69,7 @@ class VerificationWorkflow:
             query_x = current_queries[-1].x + dim.HORIZONTAL_SPACING
 
         # Create the query block
-        query_block = QueryBlock(id, property_block, title, is_negated)
+        query_block = QueryBlock(id, property_block, query_path, is_negated)
         self._setup_block(query_block, query_x, query_y, [SocketType.INPUT, SocketType.OUTPUT])
         prop_info['queries'].append(query_block)
         property_block.queries.append(query_block)

@@ -54,15 +54,14 @@ class PropertyBlock(Block):
 
 class QueryBlock(Block):
     """Block representing a verification query"""
-    def __init__(self, id, property_block, title=None, is_negated=False):
+    def __init__(self, id, property_block, path, is_negated=False):
         super().__init__()
         self.id = id
-        self.title = title or f"Query {id}"
-        if is_negated:
-            self.title = f"¬{self.title}"
+        self.property_ref = property_block  # Reference to parent property
+        self.path = path
+        self.title = f"Query {id}" if not is_negated else f"¬Query {id}"
         self.is_negated = is_negated  # True for 'for all' properties
         self.verification_status = Status.UNKNOWN
-        self.property_ref = property_block  # Reference to parent property
     
     def get_color_scheme(self):
         """Return color scheme based on verification status"""
