@@ -16,6 +16,7 @@ from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.heirachical_output import HeirarchicalOutput
 from ui.counter_examples_viewer import CounterExampleViewer
+from ui.counter_examples.render_modes import RenderMode
 
 from vehicle_lang import VERSION 
 
@@ -166,7 +167,7 @@ class VCLEditor(QMainWindow):
         self.console_tab_widget.addTab(self.log_console, "Output")
 
         # Create the Counter Examples from Cache tab
-        self.counter_examples_cache = CounterExampleViewer(mode="image")
+        self.counter_examples_cache = CounterExampleViewer(mode=RenderMode.IMAGE)
         self.console_tab_widget.addTab(self.counter_examples_cache, "Counter Examples")
 
         editor_console_splitter.addWidget(self.console_tab_widget) # Add console to splitter
