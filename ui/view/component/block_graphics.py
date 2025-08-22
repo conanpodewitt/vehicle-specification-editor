@@ -11,18 +11,26 @@ Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 """
 
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QPen, QColor, QFont, QBrush, QPainterPath, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QWidget, QGraphicsProxyWidget, QGraphicsTextItem, QVBoxLayout, QGridLayout, \
     QHBoxLayout, QMessageBox, QStyleOptionGraphicsItem, QGraphicsSceneHoverEvent, QGraphicsSceneMouseEvent
 
 import ui.view.styling.dimension as dim
 import ui.view.styling.palette as palette
+from ..verification.blocks import QueryBlock
 from ..base_types import Block
+
+
+class BlockSignals(QObject):
+    """Signal emitter for block events"""
+    query_double_clicked = pyqtSignal(str, str)  # path, title
 
 
 class BlockGraphics(QGraphicsItem):
     """Graphics representation of a Block domain model"""
+    signals = BlockSignals()     
+    
     def __init__(self, block: 'Block', parent=None):
         super().__init__(parent)
         # Reference to the block domain model
@@ -114,7 +122,11 @@ class BlockGraphics(QGraphicsItem):
         self.block_ref.update_edges()
 
     def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.open_dock_params()
+        if isinstance(self.block_ref, QueryBlock) and hasattr(self.block_ref, "path"):
+            # Emit signal to hierarchical output
+            tab_title = f"{self.block_ref.title} - {self.block_ref.path.split('/')[-1]}"
+            self.signals.query_double_clicked.emit(self.block_ref.path, tab_title)
+
 
     def paint(self, painter: 'QPainter', option: 'QStyleOptionGraphicsItem', widget=None) -> None:
         """
