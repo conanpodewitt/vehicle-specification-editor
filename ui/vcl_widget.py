@@ -119,9 +119,16 @@ class VCLEditor(QMainWindow):
         file_toolbar.addWidget(self.stop_button)
 
         # Create main window widget 
-        main_widget = QWidget()
+        main_widget = QTabWidget()
+        input_tab = QWidget()
+        output_tab = QWidget()
+        
+        main_layout = QVBoxLayout(input_tab)
+
+        main_widget.addTab(input_tab, "Input")
+        main_widget.addTab(output_tab, "Output")
+
         self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
 
         # Create main edit area 
         main_edit_layout = QHBoxLayout()
@@ -166,6 +173,8 @@ class VCLEditor(QMainWindow):
 
         editor_console_splitter.addWidget(self.console_tab_widget) # Add console to splitter
 
+
+
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
         editor_console_splitter.setStretchFactor(0, 3)
         editor_console_splitter.setStretchFactor(1, 1)
@@ -200,12 +209,13 @@ class VCLEditor(QMainWindow):
         right_layout.addWidget(resource_scroll_area)
 
         # Create output area
+        output_layout = QVBoxLayout(output_tab)
         output_label = QLabel("Output")
-        output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        #output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = output_label.font()
         font.setPointSize(14)
         output_label.setFont(font)
-        right_layout.addWidget(output_label)
+        output_layout.addWidget(output_label)
 
         # Create a scroll area for the output box
         output_qscrollarea = QScrollArea()
@@ -233,8 +243,8 @@ class VCLEditor(QMainWindow):
         self.status_bar.setSizeGripEnabled(False)
         self.status_bar.setContentsMargins(0, 0, 0, 2)
         self.setStatusBar(self.status_bar)
-        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
-        self.centralWidget().layout().setContentsMargins(l, t, r, 0)
+        # l, t, r, _ = self.centralWidget().layout().getContentsMargins()
+        # self.centralWidget().layout().setContentsMargins(l, t, r, 0)
 
         # File path label
         self.file_path_label = QLabel("No File Open")
