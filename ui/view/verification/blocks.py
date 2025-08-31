@@ -29,22 +29,56 @@ class PropertyQuantifier(Enum):
     EXISTS = 1
 
 
+class OrBlock(Block):
+    """Block representing a disjunction (OR) in verification properties"""
+    def __init__(self):
+        super().__init__()
+        self.title = "OR"
+        self.children = []  # List of child blocks
+        self.verification_status = Status.UNKNOWN   # Whether this proves or disproves the original property
+    
+    def get_color_scheme(self):
+        """Return color scheme for OR blocks"""
+        return ["#5D6D7E", "#85929E", "#85929E", "#5D6D7E", "#2c2c2c"]  # Grayish Blue
+    
+    def get_socket_colors(self):
+        """Return socket colors for OR blocks"""
+        return {"bg_color": "#85929E", "outline_color": "#5D6D7E"}  # Grayish Blue
+    
+
+class AndBlock(Block):
+    """Block representing a conjunction (AND) in verification properties"""
+    def __init__(self):
+        super().__init__()
+        self.title = "AND"
+        self.children = []  # List of child blocks
+        self.verification_status = Status.UNKNOWN       # Whether this proves or disproves the original property
+
+    def get_color_scheme(self):
+        """Return color scheme for AND blocks"""
+        return ["#5D6D7E", "#85929E", "#85929E", "#5D6D7E", "#2c2c2c"]  # Grayish Blue
+    
+    def get_socket_colors(self):
+        """Return socket colors for AND blocks"""
+        return {"bg_color": "#85929E", "outline_color": "#5D6D7E"}  # Grayish Blue
+
+
 class PropertyBlock(Block):
     """Block representing a high-level verification property"""
-    def __init__(self, property_type=PropertyQuantifier.FOR_ALL, title="Property"):
+    def __init__(self, title="Property"):
         super().__init__()
         self.title = title
-        self.property_type = property_type  # FOR_ALL or EXISTS
-        self.verification_status = Status.UNKNOWN  
-        self.queries = []  # List of associated queries
-    
+        self.verification_status = Status.UNKNOWN
+        self.children = []  # List of child blocks
+        self.queries = []   # List of associated queries
+
     def get_color_scheme(self):
         """Return color scheme based on verification status"""
         if self.verification_status == Status.VERIFIED:
             return ["#1E8449", "#27AE60", "#27AE60", "#1E8449", "#2c2c2c"]  # Green
         elif self.verification_status == Status.DISPROVEN:
             return ["#C0392B", "#E74C3C", "#E74C3C", "#C0392B", "#2c2c2c"]  # Red
-        else:  # unknown
+        else:
             return ["#B7950B", "#D4AC0D", "#D4AC0D", "#B7950B", "#2c2c2c"]  # Dull Yellow
     
     def get_socket_colors(self):
@@ -54,13 +88,13 @@ class PropertyBlock(Block):
 
 class QueryBlock(Block):
     """Block representing a verification query"""
-    def __init__(self, id, property_block, path, is_negated=False):
+    def __init__(self, id, parent, path, is_negated=False):
         super().__init__()
         self.id = id
-        self.property_ref = property_block  # Reference to parent property
+        self.parent_ref = parent
         self.path = path
         self.title = f"Query {id}" if not is_negated else f"¬Query {id}"
-        self.is_negated = is_negated  # True for 'for all' properties
+        self.is_negated = is_negated 
         self.verification_status = Status.UNKNOWN
     
     def get_color_scheme(self):
@@ -79,11 +113,11 @@ class QueryBlock(Block):
 
 class WitnessBlock(Block):
     """Block representing verification results (witness/counterexample)"""
-    def __init__(self, query_block, title=None):
+    def __init__(self, query_block):
         super().__init__()
         self.is_counterexample = query_block.is_negated
-        self.title = title or ("Counter Example" if self.is_counterexample else "Witness")
         self.query_ref = query_block  # Reference to associated query
+        self.title = "Counter Example" if self.is_counterexample else "Witness"
 
     def get_color_scheme(self):
         """Return color scheme based on counterexample vs witness"""
