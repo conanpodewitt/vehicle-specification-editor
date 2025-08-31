@@ -69,7 +69,7 @@ SOCKET_OUTLINE = 1
 
 # Hierarchical tree layout spacing
 VERTICAL_SPACING = 100      # Vertical spacing between blocks
-HORIZONTAL_SPACING = 150    # Horizontal spacing between blocks
+HORIZONTAL_SPACING = 50    # Horizontal spacing between blocks
 PROPERTY_SPACING_Y = 300    # Vertical spacing between properties
 PROPERTY_X = -400           # X position for properties
 
