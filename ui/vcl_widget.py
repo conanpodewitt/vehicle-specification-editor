@@ -121,12 +121,25 @@ class VCLEditor(QMainWindow):
         file_toolbar.addWidget(self.stop_button)
 
         # Create main window widget 
-        main_widget = QWidget()
+        main_widget = QSplitter(Qt.Orientation.Vertical)
+        main_tab = QTabWidget()
+        input_tab = QWidget()
+        output_tab = QWidget()
+        query_tab = QWidget()
+
         self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
+        input_layout = QVBoxLayout(input_tab)
+
+        main_tab.addTab(input_tab, "Input")
+        main_tab.addTab(output_tab, "Output")
+        #main_tab.addTab(query_tab, "Queries")
+
+        main_top_layout = QVBoxLayout()
+        main_bottom_layout = QVBoxLayout()
+        main_widget.addWidget(main_tab)
 
         # Create main edit area 
-        main_edit_layout = QHBoxLayout()
+        input_edit_layout = QHBoxLayout()
 
         # Create left area, containing the editor and the console
         left_layout = QVBoxLayout()
@@ -168,9 +181,10 @@ class VCLEditor(QMainWindow):
 
         # Create the Counter Examples from Cache tab
         self.counter_examples_cache = CounterExampleViewer(mode=RenderMode.IMAGE)
-        self.console_tab_widget.addTab(self.counter_examples_cache, "Counter Examples")
+        #self.console_tab_widget.addTab(self.counter_examples_cache, "Counter Examples")
+        main_tab.addTab(self.counter_examples_cache, "Counter Examples")
 
-        editor_console_splitter.addWidget(self.console_tab_widget) # Add console to splitter
+        main_widget.addWidget(self.console_tab_widget) # Add console to splitter
 
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
         editor_console_splitter.setStretchFactor(0, 3)
@@ -180,7 +194,7 @@ class VCLEditor(QMainWindow):
         left_layout.addWidget(editor_console_splitter) 
 
         # Add the left layout to the main layout
-        main_edit_layout.addLayout(left_layout, 3)
+        input_edit_layout.addLayout(left_layout, 3)
 
         # Create right area for resource boxes and output
         right_layout = QVBoxLayout()
@@ -205,13 +219,17 @@ class VCLEditor(QMainWindow):
         resource_scroll_area.setWidget(resource_scroll_content)
         right_layout.addWidget(resource_scroll_area)
 
+
+        output_layout = QVBoxLayout(output_tab)
+
         # Create output area
         output_label = QLabel("Output")
         output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = output_label.font()
         font.setPointSize(14)
         output_label.setFont(font)
-        right_layout.addWidget(output_label)
+        output_layout.addWidget(output_label)
+        
 
         # Create a scroll area for the output box
         output_qscrollarea = QScrollArea()
@@ -222,14 +240,14 @@ class VCLEditor(QMainWindow):
         # Create output box
         self.output_box = HeirarchicalOutput()
         output_qscrollarea.setWidget(self.output_box)
-        right_layout.addWidget(output_qscrollarea)
+        output_layout.addWidget(output_qscrollarea)
 
         # Set size policy for output box and scroll area
         resource_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         output_qscrollarea.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         resource_scroll_area.setMinimumWidth(200)
-        main_edit_layout.addLayout(right_layout, 2)
-        main_layout.addLayout(main_edit_layout)
+        input_edit_layout.addLayout(right_layout, 2)
+        input_layout.addLayout(input_edit_layout)
 
         # Create status bar
         self.status_bar = QStatusBar()
@@ -239,8 +257,8 @@ class VCLEditor(QMainWindow):
         self.status_bar.setSizeGripEnabled(False)
         self.status_bar.setContentsMargins(0, 0, 0, 2)
         self.setStatusBar(self.status_bar)
-        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
-        self.centralWidget().layout().setContentsMargins(l, t, r, 0)
+#        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
+#        self.centralWidget().layout().setContentsMargins(l, t, r, 0)
 
         # File path label
         self.file_path_label = QLabel("No File Open")

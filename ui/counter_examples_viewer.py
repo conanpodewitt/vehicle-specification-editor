@@ -76,7 +76,7 @@ class CounterExampleWidget(QWidget):
 
         key = self.keys[self.current_index]
         shape = list(self.data[key]["shape"])
-        self.name_label.setText(f"{key.strip('"')} {shape}")
+#        self.name_label.setText(f"{key.strip('"')} {shape}")
         content = self.data[key]
 
         # Switching rendering types based on option
