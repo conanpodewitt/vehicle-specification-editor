@@ -9,7 +9,7 @@ that creates verification graphs from data.
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPen, QColor, QBrush
 
-from .blocks import PropertyBlock, WitnessBlock, QueryBlock, PropertyQuantifier, Status
+from .blocks import PropertyBlock, WitnessBlock, QueryBlock, PropertyQuantifier, Status, AndBlock, OrBlock
 from ..base_types import Scene, Socket
 from ..graphics_view import GraphicsView
 from ..component.block_graphics import BlockGraphics
@@ -65,8 +65,8 @@ class VerificationWorkflow:
         self._create_block_graphics(query_block)
         self._create_edge_graphics(parent_block, query_block)
 
-        # Position all queries centered around the property
-        self._position_queries_centered(parent_block)
+        # Position all children centered around the parent
+        self._position_children_centered(parent_block)
 
         query_block.update_edges()
         self.graphics_view.scroll_item_into_view(query_block.graphics)
@@ -93,6 +93,52 @@ class VerificationWorkflow:
 
         self.graphics_view.scroll_item_into_view(witness_block.graphics)
         return witness_block
+    
+    def add_and(self, parent_block):
+        """Add an AND block connected to a parent with hierarchical positioning"""
+        # Position AND block below the parent
+        and_y = parent_block.y + dim.VERTICAL_SPACING
+        
+        # Create the AND block with parent reference
+        and_block = AndBlock(parent_block)
+        self._setup_block(and_block, 0, and_y, [SocketType.INPUT, SocketType.OUTPUT])  # Temporary X=0
+        
+        # Add to parent's children
+        parent_block.children.append(and_block)
+        
+        # Create graphics and connection
+        self._create_block_graphics(and_block)
+        self._create_edge_graphics(parent_block, and_block)
+        
+        # Position all children centered around the parent
+        self._position_children_centered(parent_block)
+        
+        and_block.update_edges()
+        self.graphics_view.scroll_item_into_view(and_block.graphics)
+        return and_block
+    
+    def add_or(self, parent_block):
+        """Add an OR block connected to a parent with hierarchical positioning"""
+        # Position OR block below the parent
+        or_y = parent_block.y + dim.VERTICAL_SPACING
+        
+        # Create the OR block with parent reference
+        or_block = OrBlock(parent_block)
+        self._setup_block(or_block, 0, or_y, [SocketType.INPUT, SocketType.OUTPUT])  # Temporary X=0
+        
+        # Add to parent's children
+        parent_block.children.append(or_block)
+        
+        # Create graphics and connection
+        self._create_block_graphics(or_block)
+        self._create_edge_graphics(parent_block, or_block)
+        
+        # Position all children centered around the parent
+        self._position_children_centered(parent_block)
+        
+        or_block.update_edges()
+        self.graphics_view.scroll_item_into_view(or_block.graphics)
+        return or_block
     
     def clear_workflow(self):
         """Clear the current workflow and reset positions"""
@@ -191,27 +237,32 @@ class VerificationWorkflow:
         self.graphics_scene.update()
         self.graphics_scene.invalidate()
 
-    def _position_queries_centered(self, property_block):
-        """Position all queries for a property centered around the property's X position"""
-        queries = property_block.children  # Use children attribute
-        if not queries:
+    def _position_children_centered(self, parent_block):
+        """Position all children for a parent block centered around the parent's X position"""
+        children = parent_block.children
+        if not children:
             return
             
         # Calculate starting X position
-        total_width = len(queries) * dim.BLOCK_BASE_WIDTH + (len(queries) - 1) * dim.HORIZONTAL_SPACING
-        start_x = property_block.x - (total_width - dim.BLOCK_BASE_WIDTH) // 2
+        total_width = len(children) * dim.BLOCK_BASE_WIDTH + (len(children) - 1) * dim.HORIZONTAL_SPACING
+        start_x = parent_block.x - (total_width - dim.BLOCK_BASE_WIDTH) // 2
         
-        # Position each query
-        for i, query in enumerate(queries):
-            query_x = start_x + i * (dim.BLOCK_BASE_WIDTH + dim.HORIZONTAL_SPACING)
-            query.x = query_x
-            if hasattr(query, 'graphics') and query.graphics:
-                query.graphics.setPos(query.x, query.y)
+        # Position each child
+        for i, child in enumerate(children):
+            child_x = start_x + i * (dim.BLOCK_BASE_WIDTH + dim.HORIZONTAL_SPACING)
+            child.x = child_x
+            if hasattr(child, 'graphics') and child.graphics:
+                child.graphics.setPos(child.x, child.y)
                 
         # Update edge graphics
-        for query in queries:
-            if hasattr(query, 'graphics') and query.graphics:
-                query.update_edges()
+        for child in children:
+            if hasattr(child, 'graphics') and child.graphics:
+                child.update_edges()
+                
+        # Recursively position children of children to maintain tree structure
+        for child in children:
+            if hasattr(child, 'children') and child.children:
+                self._position_children_centered(child)
 
     def _setup_block(self, block, x, y, socket_types):
         """Setup a block with position, sockets, and scene reference"""
