@@ -15,6 +15,7 @@ from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.hierarchical_output import HeirarchicalOutput
+from ui.counter_examples_viewer import CounterExampleViewer, RenderMode
 
 from vehicle_lang import VERSION 
 
