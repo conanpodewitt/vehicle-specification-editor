@@ -29,8 +29,7 @@ class VerificationWorkflow:
 
         # Properties  
         self.property_counter = 0
-        self.properties = []  
-        self.property_info = {}    
+        self.properties = []    
     
     def add_property(self, property_type, title=None):
         """Add a property block with vertical hierarchical positioning"""
@@ -42,12 +41,8 @@ class VerificationWorkflow:
         property_y = dim.WORKFLOW_START_Y + (self.property_counter * dim.PROPERTY_SPACING_Y)
         
         # Create the property at the calculated position
-        property_block = PropertyBlock(property_type, title)
+        property_block = PropertyBlock(title)
         self._setup_block(property_block, property_x, property_y, [SocketType.OUTPUT])
-        self.property_info[property_block.title] = {
-            'queries': [],
-            'witnesses': []
-        }
         self.properties.append(property_block)
         self.property_counter += 1
 
@@ -55,31 +50,25 @@ class VerificationWorkflow:
         self.graphics_view.scroll_item_into_view(property_block.graphics)
         return property_block
     
-    def add_query(self, id, property_block, query_path, is_negated=False):
+    def add_query(self, id, parent_block, query_path, is_negated=False):
         """Add a query block connected to a property with hierarchical positioning"""
-        # Get the property's query tracking info
-        prop_info = self.property_info[property_block.title]
-        current_queries = prop_info['queries']
+        # Set query Y coordinate (X will be set by centering logic)
+        query_y = parent_block.y + dim.VERTICAL_SPACING
 
-        # Set query (X, Y) coordinates
-        query_y = property_block.y + dim.VERTICAL_SPACING
-        if len(current_queries) == 0:
-            query_x = dim.PROPERTY_X
-        else:
-            query_x = current_queries[-1].x + dim.HORIZONTAL_SPACING
-
-        # Create the query block
-        query_block = QueryBlock(id, property_block, query_path, is_negated)
-        self._setup_block(query_block, query_x, query_y, [SocketType.INPUT, SocketType.OUTPUT])
-        prop_info['queries'].append(query_block)
-        property_block.queries.append(query_block)
+        query_block = QueryBlock(id, parent_block, query_path, is_negated)
+        self._setup_block(query_block, 0, query_y, [SocketType.INPUT, SocketType.OUTPUT])  # Temporary X=0
+        
+        # Add to tracking structures
+        parent_block.children.append(query_block)  # Use children attribute
         
         # Create graphics and connection
         self._create_block_graphics(query_block)
-        self._create_edge_graphics(property_block, query_block)
-        query_block.update_edges()
+        self._create_edge_graphics(parent_block, query_block)
 
-        # Update scrollbar
+        # Position all queries centered around the property
+        self._position_queries_centered(parent_block)
+
+        query_block.update_edges()
         self.graphics_view.scroll_item_into_view(query_block.graphics)
         return query_block
     
@@ -95,8 +84,6 @@ class VerificationWorkflow:
         # Create the witness block
         witness_block = WitnessBlock(query_block, title)
         self._setup_block(witness_block, witness_x, witness_y, [SocketType.INPUT])
-        prop_info = self.property_info[query_block.property_ref.title]
-        prop_info['witnesses'].append(witness_block)
         
         # Create graphics and connection
         self._create_block_graphics(witness_block)
@@ -113,7 +100,6 @@ class VerificationWorkflow:
         self.scene = Scene()
         self.property_counter = 0
         self.properties = []
-        self.property_info = {}
     
     def get_workflow_bounds(self):
         """Get the bounding rectangle of the current workflow"""
@@ -129,18 +115,7 @@ class VerificationWorkflow:
 
     def update_status(self, query_block: QueryBlock, status: Status):
         """Update verification status of a query and its parent property, then repaint"""
-        query_block.verification_status = status
-        property_block = query_block.property_ref
-        property_type = property_block.property_type
-
-        if property_type == PropertyQuantifier.FOR_ALL and status == Status.DISPROVEN:
-            property_block.verification_status = Status.DISPROVEN
-        elif property_type == PropertyQuantifier.EXISTS and status == Status.VERIFIED:
-            property_block.verification_status = Status.VERIFIED
-            
-        # Repaint the affected blocks to reflect new colors
-        self._repaint_block(query_block)
-        self._repaint_block(property_block)
+        pass
     
     def _repaint_block(self, block):
         """Repaint a block's graphics to reflect updated verification status"""
@@ -215,6 +190,28 @@ class VerificationWorkflow:
         # Force a complete graphics scene update
         self.graphics_scene.update()
         self.graphics_scene.invalidate()
+
+    def _position_queries_centered(self, property_block):
+        """Position all queries for a property centered around the property's X position"""
+        queries = property_block.children  # Use children attribute
+        if not queries:
+            return
+            
+        # Calculate starting X position
+        total_width = len(queries) * dim.BLOCK_BASE_WIDTH + (len(queries) - 1) * dim.HORIZONTAL_SPACING
+        start_x = property_block.x - (total_width - dim.BLOCK_BASE_WIDTH) // 2
+        
+        # Position each query
+        for i, query in enumerate(queries):
+            query_x = start_x + i * (dim.BLOCK_BASE_WIDTH + dim.HORIZONTAL_SPACING)
+            query.x = query_x
+            if hasattr(query, 'graphics') and query.graphics:
+                query.graphics.setPos(query.x, query.y)
+                
+        # Update edge graphics
+        for query in queries:
+            if hasattr(query, 'graphics') and query.graphics:
+                query.update_edges()
 
     def _setup_block(self, block, x, y, socket_types):
         """Setup a block with position, sockets, and scene reference"""
