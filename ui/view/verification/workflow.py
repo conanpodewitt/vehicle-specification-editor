@@ -31,7 +31,7 @@ class VerificationWorkflow:
         self.property_counter = 0
         self.properties = []    
     
-    def add_property(self, property_type, title=None):
+    def add_property(self, title=None):
         """Add a property block with vertical hierarchical positioning"""
         if title is None:
             title = f"Property"

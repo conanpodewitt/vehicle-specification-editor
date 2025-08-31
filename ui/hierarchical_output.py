@@ -111,45 +111,84 @@ class HeirarchicalOutput(QTabWidget):
 
 
     def mock_verification_output(self):
-        """Create the verification workflow from cache data"""
-        glob_pattern = "property*.vcl-plan"
-        plan_files = list(self.cache_location.glob(glob_pattern))
-        sort_key = lambda p: int(re.findall(r"(\d+)", p.stem)[-1])
-        plan_files.sort(key=sort_key)
+        """Create the verification workflow from hierarchical vcl-plan data"""
+        complex_plan_path = "temp/mnist_cache/p.vcl-plan"
+        abs_complex_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), complex_plan_path)
+        
+        if os.path.exists(abs_complex_path):
+            self._create_hierarchical_workflow(abs_complex_path, "MNIST Property")
+            return
+        
+    def _create_hierarchical_workflow(self, plan_path, title):
+        """Create a hierarchical workflow from a vcl-plan file"""
+        with open(plan_path, 'r') as f:
+            plan_data = json.load(f)
+        
+        self._global_query_id = 0
+        prop = self.workflow_generator.add_property(title=title)
+        
+        # Extract the root structure from the plan
+        query_meta = plan_data.get('queryMetaData', {}).get('contents', {}).get('contents', {})
+        root_disjuncts = query_meta.get('unDisjunctAll', [])
+        
+        # Parse the root level - this represents an OR at top level
+        self._parse_tree(prop, root_disjuncts, is_disjunct=True)
+        self.workflow_generator._position_children_centered(prop)
 
-        for pfile in plan_files:
-            try:
-                plan_json = json.loads(pfile.read_text())
-                is_negated = bool(plan_json["queryMetaData"]["contents"]["contents"]["negated"])
-            except Exception:
-                is_negated = False
+    def _parse_tree(self, parent_block, items, is_disjunct=True):
+        """
+        Recursively parse logical structure from vcl-plan data
+        
+        Args:
+            parent_block: The parent block to attach children to
+            items: List of items (queries, disjuncts, or conjuncts)
+            is_disjunct: True if items are connected by OR, False for AND
+        """
+        if not items:
+            return
 
-            ptype = PropertyQuantifier.FOR_ALL if is_negated else PropertyQuantifier.EXISTS
-            # total_num_queries = len(plan_json['queryMetaData']['contents']['contents']['queries']['unDisjunctAll'])
-            prop = self.workflow_generator.add_property(ptype, title=pfile.stem)
-
-            result_path = pfile.with_suffix('.vcl-result')
-            verification_result = bool(result_path.read_text().strip())
-            prop.verification_status = Status.VERIFIED if verification_result else Status.DISPROVEN
-
-        for prop in self.workflow_generator.properties:
-            glob_pattern = f"{prop.title}-query*.txt"
-            q_files = list(self.cache_location.glob(glob_pattern))
-            q_files.sort(key=sort_key)
-
-            for i, qfile in enumerate(q_files, start=1):
-                query_block = self.workflow_generator.add_query(i, prop, str(qfile), is_negated=is_negated)
-
-                if i == len(q_files):
-                    if prop.verification_status == Status.DISPROVEN and query_block.is_negated:
-                        self.workflow_generator.add_witness(query_block)
-                    elif prop.verification_status == Status.VERIFIED and not query_block.is_negated:
-                        self.workflow_generator.add_witness(query_block)
-                    query_status = prop.verification_status
-                else:
-                    if query_block.is_negated:
-                        query_status = Status.VERIFIED
-                    if not query_block.is_negated:
-                        query_status = Status.DISPROVEN
-
-                self.workflow_generator.update_status(query_block, query_status)
+        if len(items) == 1:
+            self._parse_node(parent_block, items[0])
+            return
+        
+        # Multiple items need a logical connector
+        if is_disjunct:
+            # Create OR block for multiple disjuncts
+            or_block = self.workflow_generator.add_or(parent_block)
+            for item in items:
+                self._parse_node(or_block, item)
+        else:
+            # Create AND block for multiple conjuncts
+            and_block = self.workflow_generator.add_and(parent_block)
+            for item in items:
+                self._parse_node(and_block, item)
+    
+    def _parse_node(self, parent_block, item):
+        """
+        Parse a single item from the vcl-plan structure
+        
+        Args:
+            parent_block: The parent block to attach the item to
+            item: Single item (Query, Disjunct, or Conjunct)
+        """
+        tag = item.get('tag', '')
+        contents = item.get('contents', {})
+        
+        if tag == 'Query':
+            # Extract query - use global query ID counter
+            queries = contents.get('queries', {}).get('unDisjunctAll', [])
+            for _ in queries:
+                # Increment global query ID for each query
+                self._global_query_id += 1
+                query_text = f"Query {self._global_query_id}"
+                self.workflow_generator.add_query(self._global_query_id, parent_block, query_text, is_negated=False)
+        
+        elif tag == 'Disjunct':
+            # Recursive disjunct (OR)
+            sub_items = contents.get('unDisjunctAll', [])
+            self._parse_tree(parent_block, sub_items, is_disjunct=True)
+        
+        elif tag == 'Conjunct':
+            # Recursive conjunct (AND)
+            sub_items = contents.get('unConjunctAll', [])
+            self._parse_tree(parent_block, sub_items, is_disjunct=False)
