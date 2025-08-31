@@ -1,4 +1,5 @@
 import os
+import json
 import traceback 
 import asyncio
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget,
@@ -122,6 +123,7 @@ class VCLEditor(QMainWindow):
         main_widget = QTabWidget()
         input_tab = QWidget()
         output_tab = QWidget()
+        query_tab = QWidget()
         
         main_layout = QVBoxLayout(input_tab)
 
@@ -527,6 +529,16 @@ class VCLEditor(QMainWindow):
         line = cursor.blockNumber() + 1
         col = cursor.positionInBlock() + 1
         self.position_label.setText(f"Ln {line}, Col {col}")
+
+    def loadCache(self):
+        with open("file.json") as cache:
+            globals = json.loads(cache)
+            cache.close()
+
+    def writeCache(self):
+        with open("user_cache.json") as cache:
+            json.dump(globals, cache)
+            cache.close()
 
     def closeEvent(self, event):
         if self.current_operation:

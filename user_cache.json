@@ -1,0 +1,10 @@
+//This is a test file for caching user settings 
+{
+    "last-opened":"path\\to\\something",
+    "verifiers":["path\\to\\v1", "path\\to\\v2"],
+    "stored-params":{
+        "param1":"someval",
+        "param2_network":"path\\to\\network",
+        "param3_dataset":"path\\to\\dataset"
+    }
+}
