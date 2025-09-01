@@ -4,7 +4,7 @@ import asyncio
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget,
                              QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox,
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
-                             QTabWidget)
+                             QTabWidget, QProgressBar)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
@@ -122,21 +122,24 @@ class VCLEditor(QMainWindow):
 
         # Create main window widget 
         main_widget = QSplitter(Qt.Orientation.Vertical)
+        # Create top tabbed section
         main_tab = QTabWidget()
+        main_widget.addWidget(main_tab)
+        # Create each of the tabs
         input_tab = QWidget()
         output_tab = QWidget()
-        query_tab = QWidget()
-
-        self.setCentralWidget(main_widget)
-        input_layout = QVBoxLayout(input_tab)
-
         main_tab.addTab(input_tab, "Input")
-        main_tab.addTab(output_tab, "Output")
-        #main_tab.addTab(query_tab, "Queries")
+        main_tab.addTab(output_tab, "Queries")
 
+
+        # Define the splitter as the main widget
+        self.setCentralWidget(main_widget)
+        
+        # Define layouts 
         main_top_layout = QVBoxLayout()
         main_bottom_layout = QVBoxLayout()
-        main_widget.addWidget(main_tab)
+        input_layout = QVBoxLayout(input_tab)
+        output_layout = QVBoxLayout(output_tab)
 
         # Create main edit area 
         input_edit_layout = QHBoxLayout()
@@ -219,9 +222,6 @@ class VCLEditor(QMainWindow):
         resource_scroll_area.setWidget(resource_scroll_content)
         right_layout.addWidget(resource_scroll_area)
 
-
-        output_layout = QVBoxLayout(output_tab)
-
         # Create output area
         output_label = QLabel("Output")
         output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -288,6 +288,11 @@ class VCLEditor(QMainWindow):
         spacer_status = QWidget()
         spacer_status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.status_bar.addWidget(spacer_status)
+
+        # Progress bar
+        progress_bar = QProgressBar()
+        progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_bar.addPermanentWidget(progress_bar)
 
         # Seperator before version and verifier
         sep_group2 = QFrame()
