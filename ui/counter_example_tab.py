@@ -112,7 +112,7 @@ class CounterExampleWidget(QWidget):
             self.current_index += 1
             self.update_display()
 
-class CounterExampleViewer(QWidget):
+class CounterExampleTab(QWidget):
     def __init__(self, mode=RenderMode.IMAGE, parent=None):
         super().__init__(parent)
         self.mode = mode
