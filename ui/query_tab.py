@@ -14,7 +14,7 @@ from ui.view.verification import VerificationWorkflow
 CACHE_LOCATION = os.path.join(os.path.dirname(__file__), "../temp/cache")
 
 
-class HeirarchicalOutput(QTabWidget):
+class QueryTab(QTabWidget):
     """Verification node editor widget for displaying verification workflows, query information, and counter-examples"""
     
     def __init__(self, parent=None, cache_location=CACHE_LOCATION):
