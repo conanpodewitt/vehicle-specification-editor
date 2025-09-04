@@ -14,9 +14,8 @@ from typing import Callable
 from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
-from ui.heirachical_output import HeirarchicalOutput
-from ui.counter_examples_viewer import CounterExampleViewer
-from ui.counter_examples.render_modes import RenderMode
+from ui.query_tab import QueryTab
+from ui.counter_example_tab import CounterExampleTab, RenderMode
 
 from vehicle_lang import VERSION 
 
@@ -183,7 +182,7 @@ class VCLEditor(QMainWindow):
         self.console_tab_widget.addTab(self.log_console, "Output")
 
         # Create the Counter Examples from Cache tab
-        self.counter_examples_cache = CounterExampleViewer(mode=RenderMode.IMAGE)
+        self.counter_examples_cache = CounterExampleTab(mode=RenderMode.IMAGE)
         #self.console_tab_widget.addTab(self.counter_examples_cache, "Counter Examples")
         main_tab.addTab(self.counter_examples_cache, "Counter Examples")
 
@@ -238,7 +237,7 @@ class VCLEditor(QMainWindow):
         output_qscrollarea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Create output box
-        self.output_box = HeirarchicalOutput()
+        self.output_box = QueryTab()
         output_qscrollarea.setWidget(self.output_box)
         output_layout.addWidget(output_qscrollarea)
 
