@@ -4,7 +4,7 @@ import asyncio
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget,
                              QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox,
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
-                             QTabWidget)
+                             QTabWidget, QProgressBar)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
@@ -15,6 +15,8 @@ from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.heirachical_output import HeirarchicalOutput
+from ui.counter_examples_viewer import CounterExampleViewer
+from ui.counter_examples.render_modes import RenderMode
 
 from vehicle_lang import VERSION 
 
@@ -119,12 +121,28 @@ class VCLEditor(QMainWindow):
         file_toolbar.addWidget(self.stop_button)
 
         # Create main window widget 
-        main_widget = QWidget()
+        main_widget = QSplitter(Qt.Orientation.Vertical)
+        # Create top tabbed section
+        main_tab = QTabWidget()
+        main_widget.addWidget(main_tab)
+        # Create each of the tabs
+        input_tab = QWidget()
+        output_tab = QWidget()
+        main_tab.addTab(input_tab, "Input")
+        main_tab.addTab(output_tab, "Queries")
+
+
+        # Define the splitter as the main widget
         self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
+        
+        # Define layouts 
+        main_top_layout = QVBoxLayout()
+        main_bottom_layout = QVBoxLayout()
+        input_layout = QVBoxLayout(input_tab)
+        output_layout = QVBoxLayout(output_tab)
 
         # Create main edit area 
-        main_edit_layout = QHBoxLayout()
+        input_edit_layout = QHBoxLayout()
 
         # Create left area, containing the editor and the console
         left_layout = QVBoxLayout()
@@ -164,7 +182,12 @@ class VCLEditor(QMainWindow):
         self.log_console.setReadOnly(True)
         self.console_tab_widget.addTab(self.log_console, "Output")
 
-        editor_console_splitter.addWidget(self.console_tab_widget) # Add console to splitter
+        # Create the Counter Examples from Cache tab
+        self.counter_examples_cache = CounterExampleViewer(mode=RenderMode.IMAGE)
+        #self.console_tab_widget.addTab(self.counter_examples_cache, "Counter Examples")
+        main_tab.addTab(self.counter_examples_cache, "Counter Examples")
+
+        main_widget.addWidget(self.console_tab_widget) # Add console to splitter
 
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
         editor_console_splitter.setStretchFactor(0, 3)
@@ -174,7 +197,7 @@ class VCLEditor(QMainWindow):
         left_layout.addWidget(editor_console_splitter) 
 
         # Add the left layout to the main layout
-        main_edit_layout.addLayout(left_layout, 3)
+        input_edit_layout.addLayout(left_layout, 3)
 
         # Create right area for resource boxes and output
         right_layout = QVBoxLayout()
@@ -205,7 +228,8 @@ class VCLEditor(QMainWindow):
         font = output_label.font()
         font.setPointSize(14)
         output_label.setFont(font)
-        right_layout.addWidget(output_label)
+        output_layout.addWidget(output_label)
+        
 
         # Create a scroll area for the output box
         output_qscrollarea = QScrollArea()
@@ -216,14 +240,14 @@ class VCLEditor(QMainWindow):
         # Create output box
         self.output_box = HeirarchicalOutput()
         output_qscrollarea.setWidget(self.output_box)
-        right_layout.addWidget(output_qscrollarea)
+        output_layout.addWidget(output_qscrollarea)
 
         # Set size policy for output box and scroll area
         resource_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         output_qscrollarea.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         resource_scroll_area.setMinimumWidth(200)
-        main_edit_layout.addLayout(right_layout, 2)
-        main_layout.addLayout(main_edit_layout)
+        input_edit_layout.addLayout(right_layout, 2)
+        input_layout.addLayout(input_edit_layout)
 
         # Create status bar
         self.status_bar = QStatusBar()
@@ -233,8 +257,8 @@ class VCLEditor(QMainWindow):
         self.status_bar.setSizeGripEnabled(False)
         self.status_bar.setContentsMargins(0, 0, 0, 2)
         self.setStatusBar(self.status_bar)
-        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
-        self.centralWidget().layout().setContentsMargins(l, t, r, 0)
+#        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
+#        self.centralWidget().layout().setContentsMargins(l, t, r, 0)
 
         # File path label
         self.file_path_label = QLabel("No File Open")
@@ -264,6 +288,11 @@ class VCLEditor(QMainWindow):
         spacer_status = QWidget()
         spacer_status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.status_bar.addWidget(spacer_status)
+
+        # Progress bar
+        progress_bar = QProgressBar()
+        progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_bar.addPermanentWidget(progress_bar)
 
         # Seperator before version and verifier
         sep_group2 = QFrame()
