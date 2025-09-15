@@ -10,8 +10,7 @@ from ui.view.component.block_graphics import BlockGraphics
 from ui.view.graphics_scene import GraphicsScene
 from ui.view.graphics_view import GraphicsView
 from ui.view.verification import VerificationWorkflow
-
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "../temp/cache")
+from ui.vcl_bindings import CACHE_DIR
 
 
 class PropertyLoader:

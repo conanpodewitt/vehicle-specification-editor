@@ -7,6 +7,8 @@ from vehicle_lang import VehicleError
 from typing import Sequence, Optional, Callable
 
 
+CACHE_DIR = os.path.join(os.path.expanduser("~"), ".vehicle_cache")
+
 class Runner:
 	def __init__(self, command: str,  script: str = "_run_vcl.py", *args: str, **kwargs: str):
 		self.script_path = os.path.join(os.path.dirname(__file__), script)
@@ -66,7 +68,6 @@ class Runner:
 		exit_code = await process.wait()
 		finish_fn(exit_code)
 
-
 	def run_sync(self, command: str, *args: str, **kwargs: str) -> str:
 		return asyncio.run(self.run(command, *args, **kwargs))
 
@@ -89,7 +90,8 @@ class VCLBindings:
 			network=self._networks,
 			dataset=self._datasets,
 			parameter=self._parameters,
-			target="MarabouQueries"
+			target="MarabouQueries",
+			output=CACHE_DIR,
 		)
 		asyncio.run(runner.run(
 			line_reader=callback_fn, 
@@ -107,6 +109,7 @@ class VCLBindings:
 			network=self._networks,
 			dataset=self._datasets,
 			parameter=self._parameters,
+			cache=CACHE_DIR,
 		)
 		asyncio.run(runner.run(
 			line_reader=callback_fn, 
@@ -116,7 +119,6 @@ class VCLBindings:
 
 	def resources(self):
 		"""Get the resources used by the VCLBindings"""
-		# Original form of resources: [ @network classifier Image -> Vector Rat 10 ]
 		vcl_output = vcl.list_resources(self._vcl_path)
 		if not vcl_output:
 			raise VehicleError("No resources found in VCL file. Something is wrong.")

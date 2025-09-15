@@ -2,9 +2,9 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication
 from ui.main_widget import VCLEditor
+from ui.vcl_bindings import CACHE_DIR
 
-TEMP_DIR = os.path.join(os.path.dirname(__file__), 'temp')
-os.makedirs(TEMP_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 def main():
     app = QApplication(sys.argv)
