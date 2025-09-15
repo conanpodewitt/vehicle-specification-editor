@@ -142,24 +142,32 @@ class GraphicsView(QGraphicsView):
         - If `animate=True`, does a short smooth pan (assumes scale-only transform).
         """
         def _do():
-            # Item bounds in scene coords
-            item_rect: QRectF = item.mapToScene(item.boundingRect()).boundingRect()
-            view_rect: QRectF = self.mapToScene(self.viewport().rect()).boundingRect()
+            # Check if item is still valid before accessing it
+            try:
+                if not item or not hasattr(item, 'mapToScene') or not hasattr(item, 'boundingRect'):
+                    return
+                
+                # Item bounds in scene coords
+                item_rect: QRectF = item.mapToScene(item.boundingRect()).boundingRect()
+                view_rect: QRectF = self.mapToScene(self.viewport().rect()).boundingRect()
 
-            dx = 0.0
-            dy = 0.0
+                dx = 0.0
+                dy = 0.0
 
-            # Horizontal adjustment
-            if item_rect.left() - margin_scene < view_rect.left():
-                dx = (item_rect.left() - margin_scene) - view_rect.left()
-            elif item_rect.right() + margin_scene > view_rect.right():
-                dx = (item_rect.right() + margin_scene) - view_rect.right()
+                # Horizontal adjustment
+                if item_rect.left() - margin_scene < view_rect.left():
+                    dx = (item_rect.left() - margin_scene) - view_rect.left()
+                elif item_rect.right() + margin_scene > view_rect.right():
+                    dx = (item_rect.right() + margin_scene) - view_rect.right()
 
-            # Vertical adjustment
-            if item_rect.top() - margin_scene < view_rect.top():
-                dy = (item_rect.top() - margin_scene) - view_rect.top()
-            elif item_rect.bottom() + margin_scene > view_rect.bottom():
-                dy = (item_rect.bottom() + margin_scene) - view_rect.bottom()
+                # Vertical adjustment
+                if item_rect.top() - margin_scene < view_rect.top():
+                    dy = (item_rect.top() - margin_scene) - view_rect.top()
+                elif item_rect.bottom() + margin_scene > view_rect.bottom():
+                    dy = (item_rect.bottom() + margin_scene) - view_rect.bottom()
+            # Ignore if item has been deleted
+            except (RuntimeError, AttributeError) as e:
+                return
 
             if dx == 0.0 and dy == 0.0:
                 return
