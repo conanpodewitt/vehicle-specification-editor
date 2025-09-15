@@ -11,7 +11,7 @@ from ui.view.graphics_scene import GraphicsScene
 from ui.view.graphics_view import GraphicsView
 from ui.view.verification import VerificationWorkflow
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "../temp/mnist_cache")
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "../temp/cache")
 
 
 class PropertyLoader:
@@ -34,7 +34,7 @@ class PropertyLoader:
             raise FileNotFoundError(f"Property plan file not found: {plan_path}")
     
     def _create_workflow_from_plan(self, plan_path: str, title: str):
-        """Create workflow from VCL plan file"""
+        """Create workflow from VCL plan file using pure JSON structure"""
         try:
             with open(plan_path, 'r') as f:
                 plan_data = json.load(f)
@@ -42,7 +42,22 @@ class PropertyLoader:
 
             # Extract the root structure from the plan
             query_meta = plan_data.get('queryMetaData', {}).get('contents', {})
-            self._parse_node(prop, query_meta)
+            
+            # Handle flat structure with single disjunction of Queries
+            if query_meta.get('tag') == 'Query':
+                contents = query_meta.get('contents', {})
+                queries = contents.get('queries', {}).get('unDisjunctAll', [])
+                or_block = self.workflow_generator.add_or(prop)
+                negated = contents.get('negated', False)
+                for _ in queries:
+                    self.global_query_id += 1
+                    query_path = os.path.join(CACHE_DIR, f"{self.property_name}-query{self.global_query_id}.txt")
+                    self.workflow_generator.add_query(self.global_query_id, or_block, query_path, is_negated=negated)
+
+            # Handle multi-level structure
+            else:
+                self._parse_node(prop, query_meta)
+                
             self.workflow_generator._position_children_centered(prop)
 
         except Exception as e:
@@ -50,7 +65,7 @@ class PropertyLoader:
             return self.workflow_generator.add_property(title=f"{title} (Error)")
     
     def _parse_node(self, parent_block, item):
-        """Parse a single item from the vcl-plan structure"""
+        """Parse a single item from the vcl-plan structure - relies on actual JSON structure"""
         tag = item.get('tag', '')
         contents = item.get('contents', {})
         
@@ -67,10 +82,13 @@ class PropertyLoader:
                 self._parse_node(and_block, sub_item)
 
         elif tag == 'Query':
-            self.global_query_id += 1
+            queries = contents.get('queries', {}).get('unDisjunctAll', [])
             negated = contents.get('negated', False)
-            query_path = os.path.join(CACHE_DIR, f"{self.property_name}-query{self.global_query_id}.txt")
-            self.workflow_generator.add_query(self.global_query_id, parent_block, query_path, is_negated=negated)
+            
+            for _ in queries:
+                self.global_query_id += 1
+                query_path = os.path.join(CACHE_DIR, f"{self.property_name}-query{self.global_query_id}.txt")
+                self.workflow_generator.add_query(self.global_query_id, parent_block, query_path, is_negated=negated)
 
 
 class QueryTab(QTabWidget):
