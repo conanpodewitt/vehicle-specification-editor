@@ -20,11 +20,13 @@ class PropertyLoader:
     def __init__(self, workflow_generator):
         self.workflow_generator = workflow_generator
         self.global_query_id = 0
+        self.property_name = None
     
     def load_property(self, property_name: str, cache_location: Path):
         """Load a property and create its workflow"""
         self.global_query_id = 0
         self.workflow_generator.clear_workflow()
+        self.property_name = property_name
         plan_path = cache_location / f"{property_name}.vcl-plan"
         if plan_path.exists():
             self._create_workflow_from_plan(str(plan_path), property_name)
@@ -39,39 +41,13 @@ class PropertyLoader:
             prop = self.workflow_generator.add_property(title=title)
 
             # Extract the root structure from the plan
-            query_meta = plan_data.get('queryMetaData', {}).get('contents', {}).get('contents', {})
-            # Determine the root disjuncts
-            if 'queries' in query_meta:
-                root_disjuncts = query_meta.get('queries', {}).get('unDisjunctAll', [])
-            else:
-                root_disjuncts = query_meta.get('unDisjunctAll', [])
-
-            # Parse the root level - this represents an OR at top level
-            self._parse_tree(prop, root_disjuncts, is_disjunct=True)
+            query_meta = plan_data.get('queryMetaData', {}).get('contents', {})
+            self._parse_node(prop, query_meta)
             self.workflow_generator._position_children_centered(prop)
 
         except Exception as e:
             print(f"Error loading {title}: {e}")
             return self.workflow_generator.add_property(title=f"{title} (Error)")
-    
-    def _parse_tree(self, parent_block, items, is_disjunct=True):
-        """Recursively parse logical structure from vcl-plan data"""
-        if not items:
-            return
-
-        if len(items) == 1:
-            self._parse_node(parent_block, items[0])
-            return
-        
-        if is_disjunct:
-            or_block = self.workflow_generator.add_or(parent_block)
-            for item in items:
-                self._parse_node(or_block, item)
-
-        else:
-            and_block = self.workflow_generator.add_and(parent_block)
-            for item in items:
-                self._parse_node(and_block, item)
     
     def _parse_node(self, parent_block, item):
         """Parse a single item from the vcl-plan structure"""
@@ -80,16 +56,21 @@ class PropertyLoader:
         
         if tag == 'Disjunct':
             sub_items = contents.get('unDisjunctAll', [])
-            self._parse_tree(parent_block, sub_items, is_disjunct=True)
+            or_block = self.workflow_generator.add_or(parent_block)
+            for sub_item in sub_items:
+                self._parse_node(or_block, sub_item)
 
         elif tag == 'Conjunct':
             sub_items = contents.get('unConjunctAll', [])
-            self._parse_tree(parent_block, sub_items, is_disjunct=False)
+            and_block = self.workflow_generator.add_and(parent_block)
+            for sub_item in sub_items:
+                self._parse_node(and_block, sub_item)
 
-        else:
+        elif tag == 'Query':
             self.global_query_id += 1
-            query_text = f"Query {self.global_query_id}"
-            self.workflow_generator.add_query(self.global_query_id, parent_block, query_text, is_negated=False)
+            negated = contents.get('negated', False)
+            query_path = os.path.join(CACHE_DIR, f"{self.property_name}-query{self.global_query_id}.txt")
+            self.workflow_generator.add_query(self.global_query_id, parent_block, query_path, is_negated=negated)
 
 
 class QueryTab(QTabWidget):
