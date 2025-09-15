@@ -130,13 +130,10 @@ class VCLEditor(QMainWindow):
         main_tab.addTab(input_tab, "Input")
         main_tab.addTab(output_tab, "Queries")
 
-
         # Define the splitter as the main widget
         self.setCentralWidget(main_widget)
         
-        # Define layouts 
-        main_top_layout = QVBoxLayout()
-        main_bottom_layout = QVBoxLayout()
+        # Define layouts for each tab
         input_layout = QVBoxLayout(input_tab)
         output_layout = QVBoxLayout(output_tab)
 
@@ -169,24 +166,24 @@ class VCLEditor(QMainWindow):
         console_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         console_font.setPointSize(12)
 
-        # Create the Problems tab
+        # Create the Problems tab in the console
         self.problems_console = QTextEdit()
         self.problems_console.setFont(console_font)
         self.problems_console.setReadOnly(True)
         self.console_tab_widget.addTab(self.problems_console, "Problems")
 
-        # Create the Output tab
+        # Create the Output tab in the console
         self.log_console = QTextEdit() # For "Output" tab
         self.log_console.setFont(console_font)
         self.log_console.setReadOnly(True)
         self.console_tab_widget.addTab(self.log_console, "Output")
 
-        # Create the Counter Examples from Cache tab
-        self.counter_examples_cache = CounterExampleTab(mode=RenderMode.IMAGE)
-        #self.console_tab_widget.addTab(self.counter_examples_cache, "Counter Examples")
-        main_tab.addTab(self.counter_examples_cache, "Counter Examples")
+        # Add console to splitter
+        main_widget.addWidget(self.console_tab_widget)
 
-        main_widget.addWidget(self.console_tab_widget) # Add console to splitter
+        # Create the Counter Examples tab
+        self.counter_examples_cache = CounterExampleTab(mode=RenderMode.IMAGE)
+        main_tab.addTab(self.counter_examples_cache, "Counter Examples")
 
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
         editor_console_splitter.setStretchFactor(0, 3)
@@ -229,7 +226,6 @@ class VCLEditor(QMainWindow):
         output_label.setFont(font)
         output_layout.addWidget(output_label)
         
-
         # Create a scroll area for the output box
         output_qscrollarea = QScrollArea()
         output_qscrollarea.setWidgetResizable(True)
@@ -256,8 +252,6 @@ class VCLEditor(QMainWindow):
         self.status_bar.setSizeGripEnabled(False)
         self.status_bar.setContentsMargins(0, 0, 0, 2)
         self.setStatusBar(self.status_bar)
-#        l, t, r, _ = self.centralWidget().layout().getContentsMargins()
-#        self.centralWidget().layout().setContentsMargins(l, t, r, 0)
 
         # File path label
         self.file_path_label = QLabel("No File Open")
@@ -266,7 +260,7 @@ class VCLEditor(QMainWindow):
         self.file_path_label.mouseReleaseEvent = lambda event: self.open_file()
         self.status_bar.addWidget(self.file_path_label)
 
-        # Sperateor between file display and cursor position
+        # Separator between file display and cursor position
         sep_fd_cursor = QFrame()
         sep_fd_cursor.setFrameShape(QFrame.Shape.VLine)
         sep_fd_cursor.setFrameShadow(QFrame.Shadow.Sunken)
@@ -293,7 +287,7 @@ class VCLEditor(QMainWindow):
         progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_bar.addPermanentWidget(progress_bar)
 
-        # Seperator before version and verifier
+        # Separator before version and verifier
         sep_group2 = QFrame()
         sep_group2.setFrameShape(QFrame.Shape.VLine)
         sep_group2.setFrameShadow(QFrame.Shadow.Sunken)
@@ -304,7 +298,7 @@ class VCLEditor(QMainWindow):
         self.version_label.setContentsMargins(0, 0, 0, 0)
         self.status_bar.addPermanentWidget(self.version_label)
 
-        # Seperator between version and verifier
+        # Separator between version and verifier
         sep_verifier = QFrame()
         sep_verifier.setFrameShape(QFrame.Shape.VLine)
         sep_verifier.setFrameShadow(QFrame.Shadow.Sunken)
@@ -415,7 +409,7 @@ class VCLEditor(QMainWindow):
         self.compile_button.setEnabled(True)
         self.verify_button.setEnabled(True)
         self.stop_button.setVisible(False)
-        self.stop_button.setEnabled(False) # Should already be if stop was clicked
+        self.stop_button.setEnabled(False)
 
         if return_code == 0: # Success
             self.status_bar.showMessage(f"{self.current_operation.capitalize()} completed successfully.", 5000)
@@ -523,7 +517,8 @@ class VCLEditor(QMainWindow):
                         self.vcl_bindings.set_network(box.name, box.path)
                     elif box.type == "dataset":
                         self.vcl_bindings.set_dataset(box.name, box.path)
-                    elif box.type == "parameter":
+                    # Only set parameter if value is not None (i.e., has been set). This allows optional (inferred) parameters.
+                    elif box.type == "parameter" and box.value is not None:
                         self.vcl_bindings.set_parameter(box.name, box.value)
                 except Exception as e:
                     QMessageBox.warning(self, "Resource Assignment Error", f"Error assigning resource {box.name}: {e}")

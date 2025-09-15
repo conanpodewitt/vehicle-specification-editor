@@ -15,10 +15,12 @@ class ResourceBox(QFrame):
         title.setFont(mono)
         layout.addWidget(title)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
         self.is_loaded = False
         self.type = type_
         self.name = name
         self.data_type = data_type
+
         if type_ == "network":
             self.view_btn = QPushButton("View Network")
             self.load_btn = QPushButton("Load Network")
@@ -26,16 +28,19 @@ class ResourceBox(QFrame):
             self.load_btn.clicked.connect(self.set_network)
             layout.addWidget(self.view_btn)
             layout.addWidget(self.load_btn)
+
         elif type_ == "dataset":
             self.load_btn = QPushButton("Load Dataset")
             self.load_btn.clicked.connect(self.set_dataset)
             layout.addWidget(self.load_btn)
+
         elif type_ == "parameter":
-            if data_type is None:
-                raise ValueError("Data type must be specified for parameters.")
+            self.value = None   # Unset value is None
+
             self.input_box = QLineEdit()
             self.input_box.editingFinished.connect(self.set_value)
             layout.addWidget(self.input_box)
+            
             # Add a label to show the data type
             self.data_type_label = QLabel(f"Data Type: {data_type}")
             label_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
@@ -45,6 +50,7 @@ class ResourceBox(QFrame):
             layout.addWidget(self.data_type_label)
             self.input_box.setPlaceholderText(f"Enter {self.data_type} value")
             self.data_type = data_type
+
         self.setLayout(layout)
     
     def set_network(self):
@@ -91,6 +97,7 @@ class ResourceBox(QFrame):
             value = value.lower() == "true"
         else:
             raise ValueError(f"Unexpected data type: {self.data_type}")
+        
         self.input_box.setText(str(value))
         self.is_loaded = True
         self.value = value
