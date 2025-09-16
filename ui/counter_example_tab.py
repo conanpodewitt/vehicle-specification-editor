@@ -11,6 +11,8 @@ from PyQt6.QtGui import QIcon, QImage, QPixmap
 import numpy as np
 from enum import Enum
 
+from ui.vcl_bindings import CACHE_DIR
+
 
 class RenderMode(Enum):
     """Rendering modes for counterexamples"""
@@ -219,10 +221,6 @@ class CounterExampleTab(QWidget):
         self.mode_selector.setFixedWidth(100)
         control_layout.addWidget(self.mode_selector)
 
-        # Folder display
-        self.folder_label = QLabel("No folder selected")
-        control_layout.addWidget(self.folder_label)
-
         # Folder selection button
         self.folder_button = QPushButton()
         self.folder_button.setIcon(QIcon.fromTheme("folder"))
@@ -235,8 +233,15 @@ class CounterExampleTab(QWidget):
         # Content widget
         self.content_widget = CounterExampleWidget(mode=self.mode)
         self.layout.addWidget(self.content_widget)
-
         self.setLayout(self.layout)
+
+        # Folder display
+        if os.path.exists(CACHE_DIR):
+            self.folder_label = QLabel(CACHE_DIR)
+            self.load_counter_examples_from_folder(CACHE_DIR)
+        else:
+            self.folder_label = QLabel("Cache directory not found")
+        control_layout.addWidget(self.folder_label)
 
     def change_mode(self, new_mode):
         """Change the rendering mode."""
