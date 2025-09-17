@@ -12,16 +12,11 @@ def main():
     app.setStyle("Fusion")
     editor = VCLEditor()
     editor.show()
-<<<<<<< HEAD
     
     
     sys.exit(app.exec())
 
 
 
-=======
-    sys.exit(app.exec())
-
->>>>>>> 1ca471c (Clean up run_gui.py by removing unused imports)
 if __name__ == "__main__":
     main()

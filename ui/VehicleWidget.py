@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplitter, QTextEdit,
                            QHBoxLayout, QStatusBar, QProgressBar, QFrame, QMessageBox,
                            QComboBox, QPlainTextEdit, QScrollArea, QSizePolicy)
 from PyQt6.QtCore import Qt, QRegularExpression, QRect, QSize
-from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat, QAction
+from PyQt6.QtGui import QFont, QTextCharFormat, QColor, QSyntaxHighlighter, QTextCursor, QPainter, QTextFormat, QAction, QShortcut, QKeySequence
 from ui.CodeEditor import CodeEditor
 from vehicle_lang import verify
 
@@ -55,20 +55,20 @@ class VCLEditor(QMainWindow):
         toolbar_layout = QHBoxLayout()
         
         # File operation buttons
-        #file_buttons_layout = QHBoxLayout()
-        #self.new_button = QPushButton("New")
-        #self.new_button.clicked.connect(self.new_file)
-        #file_buttons_layout.addWidget(self.new_button)
+        file_buttons_layout = QHBoxLayout()
+        self.new_button = QPushButton("New")
+        self.new_button.clicked.connect(self.new_file)
+        file_buttons_layout.addWidget(self.new_button)
         
-        #self.open_button = QPushButton("Open")
-        #self.open_button.clicked.connect(self.open_file)
-        #file_buttons_layout.addWidget(self.open_button)
+        self.open_button = QPushButton("Open")
+        self.open_button.clicked.connect(self.open_file)
+        file_buttons_layout.addWidget(self.open_button)
         
-        #self.save_button = QPushButton("Save")
-        #self.save_button.clicked.connect(self.save_file)
-        #file_buttons_layout.addWidget(self.save_button)
+        self.save_button = QPushButton("Save")
+        self.save_button.clicked.connect(self.save_file)
+        file_buttons_layout.addWidget(self.save_button)
         
-        #toolbar_layout.addLayout(file_buttons_layout)
+        toolbar_layout.addLayout(file_buttons_layout)
         
         # Add spacing
         toolbar_layout.addStretch(1)
@@ -169,6 +169,27 @@ class VCLEditor(QMainWindow):
         
         #self.verifier_label = QLabel("Verifier not set")
         #self.status_bar.addPermanentWidget(self.verifier_label)
+
+
+        # Set Shortcuts:
+        # Save
+        self.shortcut_save = QShortcut(QKeySequence('Ctrl+S'), self)
+        self.shortcut_save.activated.connect(self.save_file)
+        # Open
+        self.shortcut_open = QShortcut(QKeySequence('Ctrl+O'), self)
+        self.shortcut_open.activated.connect(self.open_file)
+        # Verify
+        self.shortcut_verify = QShortcut(QKeySequence('Ctrl+Shift+R'), self)
+        self.shortcut_verify.activated.connect(self.verify_spec)
+        # Set Verifier
+        self.shortcut_verifier = QShortcut(QKeySequence('Ctrl+U'), self)
+        self.shortcut_verifier.activated.connect(self.set_verifier)
+        # Compile
+        self.shortcut_compile = QShortcut(QKeySequence('Ctrl+Shift+B'), self)
+        self.shortcut_compile.activated.connect(self.compile_spec)
+
+        #Zoom levels
+
     
     def initMenu(self):
         

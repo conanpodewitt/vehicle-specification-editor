@@ -1,4 +1,3 @@
-
 import os
 import traceback 
 import asyncio
@@ -7,7 +6,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, Q
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
                              QTabWidget, QProgressBar)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool
-from PyQt6.QtGui import QFontDatabase, QIcon
+from PyQt6.QtGui import QFontDatabase, QIcon, QKeySequence, QAction
 from superqt.utils import CodeSyntaxHighlight
 import functools
 from typing import Callable
@@ -84,9 +83,6 @@ class VCLEditor(QMainWindow):
 
         self.show_ui()
 
-        # Create main window widgets
-        self.init_ui()
-    
     def show_ui(self):
         """Initialize UI"""
         # Create menu bar
@@ -94,9 +90,22 @@ class VCLEditor(QMainWindow):
         self.addToolBar(file_toolbar)
         file_toolbar.setMovable(False)
         file_toolbar.setFloatable(False)
-        file_toolbar.addAction(QIcon.fromTheme("document-new"), "New", self.new_file)
-        file_toolbar.addAction(QIcon.fromTheme("document-open"), "Open", self.open_file)
-        file_toolbar.addAction(QIcon.fromTheme("document-save"), "Save", self.save_file)
+
+        toolbar_new = QAction(QIcon.fromTheme("document-new"), "New (Ctrl+N)", self)
+        toolbar_new.triggered.connect(self.new_file)
+        toolbar_new.setShortcut(QKeySequence('Ctrl+N'))
+        file_toolbar.addAction(toolbar_new)
+
+        toolbar_open = QAction(QIcon.fromTheme("document-open"), "Open (Ctrl+O)", self)
+        toolbar_open.triggered.connect(self.open_file)
+        toolbar_open.setShortcut(QKeySequence('Ctrl+O'))
+        file_toolbar.addAction(toolbar_open)
+
+        toolbar_save = QAction(QIcon.fromTheme("document-save"), "Save (Ctrl+S)", self)
+        toolbar_save.triggered.connect(self.save_file)
+        toolbar_save.setShortcut(QKeySequence('Ctrl+S'))
+        file_toolbar.addAction(toolbar_save)
+        
 
         # Add a spacer to the toolbar. This will push the buttons to the right
         spacer = QWidget()
@@ -106,21 +115,28 @@ class VCLEditor(QMainWindow):
         # Add set verifier, compile, and verify buttons
         verifier_btn = QPushButton(QIcon.fromTheme("computer"), "Set Verifier")
         verifier_btn.clicked.connect(self.set_verifier)
+        verifier_btn.setToolTip("Ctrl+Shift+U")
+        verifier_btn.setShortcut(QKeySequence('Ctrl+Shift+U'))
         file_toolbar.addWidget(verifier_btn)
 
         self.compile_button = QPushButton(QIcon.fromTheme("scanner"), "Compile")
         self.compile_button.clicked.connect(self.compile_spec)
+        self.compile_button.setToolTip("Ctrl+Shift+B")
+        self.compile_button.setShortcut(QKeySequence('Ctrl+Shift+B'))
         file_toolbar.addWidget(self.compile_button)
 
         self.verify_button = QPushButton(QIcon.fromTheme("media-playback-start"), "Verify")
         self.verify_button.clicked.connect(self.verify_spec)
+        self.verify_button.setToolTip("Ctrl+Shift+R")
+        self.verify_button.setShortcut(QKeySequence('Ctrl+Shift+R'))
         file_toolbar.addWidget(self.verify_button)
 
         # Add stop button for running operations
         self.stop_button = QPushButton(QIcon.fromTheme("process-stop", QIcon.fromTheme("media-playback-stop")), "Stop")
-        self.stop_button.setToolTip("Stop the current operation")
+        self.stop_button.setToolTip("Stop the current operation (Ctrl+Shift+W)")
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop_current_operation)
+        self.stop_button.setShortcut(QKeySequence('Ctrl+Shift+W'))
         file_toolbar.addWidget(self.stop_button)
 
         # Create main window widget 
@@ -223,6 +239,7 @@ class VCLEditor(QMainWindow):
         self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         resource_scroll_content.setLayout(self.resource_layout)
         resource_scroll_area.setWidget(resource_scroll_content)
+        resource_scroll_area.setWidgetResizable(True)
         right_layout.addWidget(resource_scroll_area)
 
         # Create output area
@@ -323,13 +340,6 @@ class VCLEditor(QMainWindow):
 
         # Connect cursor movements to update the position indicator
         self.editor.cursorPositionChanged.connect(self.update_cursor_position)
-        # Create bottom toolbar
-        bottom_layout = QHBoxLayout()
-        version_button = QPushButton("Version")
-        version_button.clicked.connect(self.show_version)
-        bottom_layout.addWidget(version_button)
-        bottom_layout.addStretch(1)
-        main_layout.addLayout(bottom_layout)
 
     # --- File Operations ---
 
