@@ -59,13 +59,14 @@ def decode_counter_examples(cache_dir: str = "../temp") -> dict:
     for subdir in subdirs:
         subdir_path = os.path.join(cache_dir, subdir)
         for filename in os.listdir(subdir_path):
-            if filename.endswith('.idx'):
-                full_path = os.path.join(subdir_path, filename)
-                try:
-                    tensor_json = decode_idx(full_path)
-                    counter_examples[filename] = tensor_json
-                except Exception as e:
-                    print(f"Error decoding {full_path}: {e}")
+            full_path = os.path.join(subdir_path, filename)
+            var_name = filename.strip('\"')
+            key = f"{subdir}-{var_name}"
+            try:
+                tensor_json = decode_idx(full_path)
+                counter_examples[key] = tensor_json
+            except Exception as e:
+                print(f"Error decoding {full_path}: {e}")
 
     return counter_examples
 
@@ -162,10 +163,7 @@ class CounterExampleWidget(QWidget):
 
         key = self.keys[self.current_index]
         content = self.data[key]
-        shape = content.get("shape", [])
-
-        # Update label with filename and shape
-        self.name_label.setText(f"{key} {shape}")
+        self.name_label.setText(f"{key}")
 
         # Render based on mode
         if self.mode == RenderMode.IMAGE:
@@ -193,13 +191,17 @@ class CounterExampleWidget(QWidget):
         """Navigate to previous counterexample."""
         if self.current_index > 0:
             self.current_index -= 1
-            self.update_display()
+        else:
+            self.current_index = len(self.keys) - 1
+        self.update_display()
 
     def go_next(self):
         """Navigate to next counterexample."""
         if self.current_index < len(self.keys) - 1:
             self.current_index += 1
-            self.update_display()
+        else:
+            self.current_index = 0
+        self.update_display()
 
 
 class CounterExampleTab(QWidget):
@@ -255,17 +257,7 @@ class CounterExampleTab(QWidget):
             self.folder_label.setText(folder)
             self.load_counter_examples_from_folder(folder)
 
-    def load_counter_examples_from_folder(self, folder):
+    def load_counter_examples_from_folder(self, folder=CACHE_DIR):
         """Load counterexamples from the selected folder."""
         counter_examples_json = decode_counter_examples(folder)
         self.content_widget.set_data(counter_examples_json)
-
-
-# Command-line testing
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        cache_location = sys.argv[1]
-        result = decode_counter_examples(cache_location)
-        print(json.dumps(result, indent=2))
-    else:
-        print("Usage: python counter_example_tab.py <cache_directory>")

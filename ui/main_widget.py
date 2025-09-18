@@ -470,14 +470,14 @@ class VCLEditor(QMainWindow):
         self.thread_pool.start(worker)
 
     def compile_spec(self):
-        # Clear out old compilation cache
-        for file in glob.glob(CACHE_DIR + "/*"):
-            try:
-                os.remove(file)
-            except Exception as e:
-                self.problems_console.append(f"Error clearing cache file {file}: {e}")
+        # Recursively clear cache directory
+        for root, _, files in os.walk(CACHE_DIR, topdown=False):
+            for name in files:
+                try:
+                    os.remove(os.path.join(root, name))
+                except Exception as e:
+                    self.problems_console.append(f"Error clearing cache file {name}: {e}")
         self.query_tab.refresh_properties()
-        
         self._start_vcl_operation("compile")
 
     def verify_spec(self):
