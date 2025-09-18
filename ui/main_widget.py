@@ -228,20 +228,13 @@ class VCLEditor(QMainWindow):
         output_label.setFont(font)
         output_layout.addWidget(output_label)
         
-        # Create a scroll area for the output box
-        output_qscrollarea = QScrollArea()
-        output_qscrollarea.setWidgetResizable(True)
-        output_qscrollarea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        output_qscrollarea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
         # Create output box
         self.query_tab = QueryTab()
-        output_qscrollarea.setWidget(self.query_tab)
-        output_layout.addWidget(output_qscrollarea)
+        output_layout.addWidget(self.query_tab)
 
-        # Set size policy for output box and scroll area
+        # Set size policy for output box
         resource_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        output_qscrollarea.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.query_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         resource_scroll_area.setMinimumWidth(200)
         input_edit_layout.addLayout(right_layout, 2)
         input_layout.addLayout(input_edit_layout)

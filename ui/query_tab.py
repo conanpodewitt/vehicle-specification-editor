@@ -115,6 +115,7 @@ class QueryTab(QTabWidget):
         # Create and add workflow tab
         self._workflow_widget = self._create_workflow_widget()
         self.addTab(self._workflow_widget, "Workflow")
+        self.setCurrentIndex(0)  # Ensure the workflow tab is selected
         self._refresh_close_buttons()
         
         # Connect signals and load initial property

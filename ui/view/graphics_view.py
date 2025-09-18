@@ -7,8 +7,8 @@ Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 """
 
-from PyQt6.QtCore import Qt, QTimer, QPointF, QRectF, QPropertyAnimation, QObject, QEvent
-from PyQt6.QtGui import QPainter, QMouseEvent
+from PyQt6.QtCore import Qt, QTimer, QPointF, QRectF, QPropertyAnimation, QObject
+from PyQt6.QtGui import QPainter
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QGraphicsView
 
@@ -30,6 +30,10 @@ class GraphicsView(QGraphicsView):
         self.setScene(self.gr_scene_ref)
         self.zoom = dim.ZOOM
 
+        # Right mouse drag state
+        self.right_mouse_dragging = False
+        self.last_mouse_pos = None
+
         self.init_ui()
 
     def init_ui(self):
@@ -43,6 +47,12 @@ class GraphicsView(QGraphicsView):
         # Enable scrollbars
         self.h_scrollbar = self.horizontalScrollBar()
         self.v_scrollbar = self.verticalScrollBar()
+        
+        # Ensure the view can receive mouse events
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)  # Disable right-click context menu
 
     def zoom_in(self):
         self.zoom += dim.ZOOM_STEP
@@ -72,50 +82,49 @@ class GraphicsView(QGraphicsView):
 
     def mousePressEvent(self, event: 'QtGui.QMouseEvent') -> None:
         """
-        Differentiate the mouse buttons click
-
+        Handle mouse press events, including right mouse button for dragging
         """
 
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self.middle_mouse_click(event)
+        if event.button() == Qt.MouseButton.RightButton:
+            self.setFocus()
+            self.right_mouse_dragging = True
+            self.last_mouse_pos = event.position()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
         else:
             super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: 'QtGui.QMouseEvent') -> None:
         """
-        Differentiate the mouse buttons click
-
+        Handle mouse release events
         """
 
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self.middle_mouse_release(event)
+        if event.button() == Qt.MouseButton.RightButton:
+            self.right_mouse_dragging = False
+            self.last_mouse_pos = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
         else:
             super().mouseReleaseEvent(event)
 
-    def middle_mouse_click(self, event: 'QtGui.QMouseEvent') -> None:
+    def mouseMoveEvent(self, event: 'QtGui.QMouseEvent') -> None:
         """
-        Drag the view
-
+        Handle mouse move events, including right mouse dragging
         """
 
-        release_event = QMouseEvent(QEvent.Type.MouseButtonRelease, event.position(), event.globalPosition(),
-                                    Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton, event.modifiers())
-        super().mouseReleaseEvent(release_event)
-
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-
-        # Fake press event
-        fake_event = QMouseEvent(event.type(), event.position(), event.globalPosition(),
-                                 Qt.MouseButton.LeftButton, event.buttons() | Qt.MouseButton.LeftButton,
-                                 event.modifiers())
-        super().mousePressEvent(fake_event)
-
-    def middle_mouse_release(self, event: 'QtGui.QMouseEvent') -> None:
-        fake_event = QMouseEvent(event.type(), event.position(), event.globalPosition(),
-                                 Qt.MouseButton.LeftButton, event.buttons() & ~Qt.MouseButton.LeftButton,
-                                 event.modifiers())
-        super().mouseReleaseEvent(fake_event)
-        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        if self.right_mouse_dragging and self.last_mouse_pos is not None:
+            # Calculate the delta movement
+            delta = event.position() - self.last_mouse_pos
+            
+            # Scroll the view by the delta amount
+            self.horizontalScrollBar().setValue(int(self.horizontalScrollBar().value() - delta.x()))
+            self.verticalScrollBar().setValue(int(self.verticalScrollBar().value() - delta.y()))
+            
+            # Update the last position
+            self.last_mouse_pos = event.position()
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
 
     def wheelEvent(self, event: 'QtGui.QWheelEvent') -> None:
         """
