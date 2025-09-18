@@ -2,17 +2,36 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication
 from ui.main_widget import VCLEditor
+from ui.vcl_bindings import CACHE_DIR
 
-TEMP_DIR = os.path.join(os.path.dirname(__file__), 'temp')
-os.makedirs(TEMP_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+import sys
+import os
+from PyQt6.QtWidgets import QApplication
+from ui.main_widget import VCLEditor
+from ui.vcl_bindings import CACHE_DIR
+
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 def main():
     app = QApplication(sys.argv)
     # Set application style
     app.setStyle("Fusion")
-    editor = VCLEditor()
-    editor.show()
-    sys.exit(app.exec())
+    
+    try:
+        editor = VCLEditor()
+        editor.show()
+        exit_code = app.exec()
+        
+        # Use os._exit to avoid Python cleanup that causes segfaults
+        os._exit(exit_code)
+        
+    except Exception as e:
+        print(f"Error during application execution: {e}")
+        import traceback
+        traceback.print_exc()
+        os._exit(1)
 
 if __name__ == "__main__":
     main()

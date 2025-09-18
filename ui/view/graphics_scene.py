@@ -9,7 +9,7 @@ Original author: Andrea Gimelli, Giacomo Rosato, Stefano Demarchi
 
 import math
 
-from PyQt6.QtCore import QLine, pyqtSignal, QTimer
+from PyQt6.QtCore import QLine, pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QColor, QPen
 from PyQt6.QtWidgets import QGraphicsScene
 
@@ -133,6 +133,32 @@ class GraphicsScene(QGraphicsScene):
         """
 
         pass
+
+    # Event handlers to ignore right-click events and allow propagation to view
+
+    def mousePressEvent(self, event):
+        """Handle mouse press events in the scene"""
+        # Don't consume right mouse events
+        if event.button() == Qt.MouseButton.RightButton:
+            event.ignore() 
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Handle mouse move events in the scene"""
+        # Don't consume right mouse events during dragging
+        if event.buttons() & Qt.MouseButton.RightButton:
+            event.ignore()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release events in the scene"""
+        # Don't consume right mouse events
+        if event.button() == Qt.MouseButton.RightButton:
+            event.ignore()
+        else:
+            super().mouseReleaseEvent(event)
 
     def drawBackground(self, painter, rect):
         """

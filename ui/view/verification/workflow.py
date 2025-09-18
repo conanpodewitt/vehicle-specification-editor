@@ -47,7 +47,6 @@ class VerificationWorkflow:
         self.property_counter += 1
 
         self._create_block_graphics(property_block)
-        self.graphics_view.scroll_item_into_view(property_block.graphics)
         return property_block
     
     def add_query(self, id, parent_block, query_path, is_negated=False):
@@ -69,7 +68,6 @@ class VerificationWorkflow:
         self._position_children_centered(parent_block)
 
         query_block.update_edges()
-        self.graphics_view.scroll_item_into_view(query_block.graphics)
         return query_block
     
     def add_witness(self, query_block, title=None):
@@ -91,7 +89,6 @@ class VerificationWorkflow:
         witness_block.update_edges()
         query_block.update_edges()
 
-        self.graphics_view.scroll_item_into_view(witness_block.graphics)
         return witness_block
     
     def add_and(self, parent_block):
@@ -114,7 +111,6 @@ class VerificationWorkflow:
         self._position_children_centered(parent_block)
         
         and_block.update_edges()
-        self.graphics_view.scroll_item_into_view(and_block.graphics)
         return and_block
     
     def add_or(self, parent_block):
@@ -137,7 +133,6 @@ class VerificationWorkflow:
         self._position_children_centered(parent_block)
         
         or_block.update_edges()
-        self.graphics_view.scroll_item_into_view(or_block.graphics)
         return or_block
     
     def clear_workflow(self):
