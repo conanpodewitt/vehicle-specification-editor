@@ -1,7 +1,7 @@
 import os
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QFontDatabase
-from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QFont, QFontDatabase, QIcon
+from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QLineEdit, QFrame, QFileDialog, QMessageBox, QSizePolicy, QHBoxLayout
 
 class ResourceBox(QFrame):
     def __init__(self, name, type_, data_type=None):
@@ -21,18 +21,21 @@ class ResourceBox(QFrame):
         self.name = name
         self.data_type = data_type
 
-        if type_ == "network":
-            self.view_btn = QPushButton("View Network")
-            self.load_btn = QPushButton("Load Network")
-            self.view_btn.clicked.connect(lambda: print(f"Viewing network: {name}"))
-            self.load_btn.clicked.connect(self.set_network)
-            layout.addWidget(self.view_btn)
-            layout.addWidget(self.load_btn)
-
-        elif type_ == "dataset":
-            self.load_btn = QPushButton("Load Dataset")
+        if type_ == "network" or type_ == "dataset":
+            input_layout = QHBoxLayout()
+            self.input_box = QLineEdit()
+            self.input_box.setPlaceholderText(f"No {type_} loaded")
+            self.input_box.setReadOnly(True)
+            input_layout.addWidget(self.input_box)
+            
+            # Create small folder icon button
+            self.load_btn = QPushButton()
+            self.load_btn.setIcon(QIcon.fromTheme("folder"))
+            self.load_btn.setFixedSize(32, 32)
             self.load_btn.clicked.connect(self.set_dataset)
-            layout.addWidget(self.load_btn)
+            input_layout.addWidget(self.load_btn)
+            input_layout.setSpacing(4)
+            layout.addLayout(input_layout)
 
         elif type_ == "parameter":
             # TODO: Fix `vehicle list resources` to not show inferred parameters
@@ -63,7 +66,8 @@ class ResourceBox(QFrame):
         if not file_path:
             return
         self.path = file_path
-        self.load_btn.setText(f"Loaded: {os.path.basename(file_path)}")
+        self.input_box.setText(os.path.basename(file_path))
+        self.input_box.setToolTip(file_path) # Show full path on hover
         self.is_loaded = True
 
     def set_dataset(self):
@@ -74,7 +78,8 @@ class ResourceBox(QFrame):
         if not file_path:
             return
         self.path = file_path
-        self.load_btn.setText(f"Loaded: {os.path.basename(file_path)}")
+        self.input_box.setText(os.path.basename(file_path))
+        self.input_box.setToolTip(file_path) # Show full path on hover
         self.is_loaded = True
     
     def set_value(self):
