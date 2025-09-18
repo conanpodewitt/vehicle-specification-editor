@@ -4,7 +4,7 @@ import asyncio
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget,
                              QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox,
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
-                             QTabWidget, QProgressBar)
+                             QTabWidget, QProgressBar, QApplication)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
@@ -566,4 +566,6 @@ class VCLEditor(QMainWindow):
                 return
         else:
             event.accept()
-        super().closeEvent(event)
+
+        if QApplication.instance():
+            QApplication.instance().quit()

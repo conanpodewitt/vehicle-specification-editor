@@ -197,4 +197,4 @@ class GraphicsView(QGraphicsView):
             target_center = QPointF(new_left + new_width / 2.0, new_top + new_height / 2.0)
             self.centerOn(target_center)
 
-        QTimer.singleShot(0, _do)    
+        QTimer.singleShot(0, _do)
