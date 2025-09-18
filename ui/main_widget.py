@@ -10,12 +10,14 @@ from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
 import functools
 from typing import Callable
+import glob
 
 from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.query_tab import QueryTab
 from ui.counter_example_tab import CounterExampleTab, RenderMode
+from ui.vcl_bindings import CACHE_DIR
 
 from vehicle_lang import VERSION 
 
@@ -182,8 +184,8 @@ class VCLEditor(QMainWindow):
         main_widget.addWidget(self.console_tab_widget)
 
         # Create the Counter Examples tab
-        self.counter_examples_cache = CounterExampleTab(mode=RenderMode.IMAGE)
-        main_tab.addTab(self.counter_examples_cache, "Counter Examples")
+        self.counter_example_tab = CounterExampleTab(mode=RenderMode.IMAGE)
+        main_tab.addTab(self.counter_example_tab, "Counter Examples")
 
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
         editor_console_splitter.setStretchFactor(0, 3)
@@ -233,8 +235,8 @@ class VCLEditor(QMainWindow):
         output_qscrollarea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Create output box
-        self.output_box = QueryTab()
-        output_qscrollarea.setWidget(self.output_box)
+        self.query_tab = QueryTab()
+        output_qscrollarea.setWidget(self.query_tab)
         output_layout.addWidget(output_qscrollarea)
 
         # Set size policy for output box and scroll area
@@ -318,7 +320,7 @@ class VCLEditor(QMainWindow):
 
     def new_file(self):
         self.editor.clear()
-        self.output_box.clear()
+        self.query_tab.clear()
         self.file_path_label.setText("No file opened")
         self.status_bar.showMessage("New file created", 3000)
         self.vcl_path = None
@@ -403,6 +405,10 @@ class VCLEditor(QMainWindow):
         current_widget.ensureCursorVisible()
         self.console_tab_widget.setCurrentWidget(current_widget)
 
+        # Refresh properties in query tab after any output
+        if self.current_operation == "verify":
+            self.counter_example_tab.load_counter_examples_from_folder()
+
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
         """Handles the completion of a VCL operation from the worker thread."""
@@ -422,7 +428,8 @@ class VCLEditor(QMainWindow):
             self.status_bar.showMessage(f"Error during {self.current_operation.capitalize()}. Check Problems tab.", 5000)
             self.problems_console.append(f"\n--- {self.current_operation.capitalize()} failed. ---")
             if self.console_tab_widget: self.console_tab_widget.setCurrentWidget(self.problems_console)
-        
+
+        self.query_tab.refresh_properties()
         self.current_operation = None
 
     def stop_current_operation(self):
@@ -436,7 +443,6 @@ class VCLEditor(QMainWindow):
             return
 
         self.assign_resources()
-
         if operation_name == "verify" and not self.vcl_bindings.verifier_path:
             QMessageBox.warning(self, "Verification Error", "Please set the verifier path first.")
             return
@@ -454,7 +460,7 @@ class VCLEditor(QMainWindow):
         self.stop_event.clear() # Clear any previous stop signal
         self.problems_console.clear()
         self.log_console.clear()
-        self.output_box.clear() # Clear the original right-side log as well
+        self.query_tab.clear() # Clear previous queries
 
         if operation_name == "compile":
             operation = functools.partial(self.vcl_bindings.compile, stop_event=self.stop_event)
@@ -471,6 +477,14 @@ class VCLEditor(QMainWindow):
         self.thread_pool.start(worker)
 
     def compile_spec(self):
+        # Clear out old compilation cache
+        for file in glob.glob(CACHE_DIR + "/*"):
+            try:
+                os.remove(file)
+            except Exception as e:
+                self.problems_console.append(f"Error clearing cache file {file}: {e}")
+        self.query_tab.refresh_properties()
+        
         self._start_vcl_operation("compile")
 
     def verify_spec(self):
@@ -532,7 +546,7 @@ class VCLEditor(QMainWindow):
         self.vcl_bindings.vcl_path = path
         self.vcl_path = path
         self.file_path_label.setText(f"File: {os.path.basename(path)}")
-        self.output_box.clear() # Clear previous output for new file
+        self.query_tab.clear() # Clear previous output for new file
         self.generate_resource_boxes() # Regenerate resource inputs for the new file
 
     def update_cursor_position(self):

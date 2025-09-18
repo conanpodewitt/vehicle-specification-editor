@@ -35,7 +35,9 @@ class ResourceBox(QFrame):
             layout.addWidget(self.load_btn)
 
         elif type_ == "parameter":
-            self.value = None   # Unset value is None
+            # TODO: Fix `vehicle list resources` to not show inferred parameters
+            self.is_loaded = True   # Parameters are considered loaded by default since they may be optional
+            self.value = None       # Unset value is None
 
             self.input_box = QLineEdit()
             self.input_box.editingFinished.connect(self.set_value)

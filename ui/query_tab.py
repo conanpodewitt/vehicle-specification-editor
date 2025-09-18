@@ -148,6 +148,7 @@ class QueryTab(QTabWidget):
     def _populate_property_dropdown(self):
         """Populate dropdown with available properties"""
         properties = []
+        self.property_dropdown.clear()
 
         if self.cache_location.exists():
             pattern = "*.vcl-plan"
@@ -195,15 +196,15 @@ class QueryTab(QTabWidget):
     def refresh_properties(self):
         """Refresh available properties list"""
         current = self.property_dropdown.currentText()
-        self.property_dropdown.clear()
         self._populate_property_dropdown()
         
         # Restore selection if possible
         index = self.property_dropdown.findText(current)
-        if index >= 0:
+        if index != -1:
             self.property_dropdown.setCurrentIndex(index)
         else:
-            self._load_current_property()
+            self.property_dropdown.setCurrentIndex(0)
+        self._load_current_property()
     
     def _clear_text_tabs(self):
         """Remove all text tabs except workflow tab"""
