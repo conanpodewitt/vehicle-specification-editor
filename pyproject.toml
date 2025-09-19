@@ -9,12 +9,12 @@ description = "A GUI frontend for the vehicle command line tool"
 readme = "PyPi-README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "PyQt6==6.8.1",
-    "vehicle_lang==0.19.0",
-    "PyQt6-Qt6==6.8.2",
-    "superqt==0.7.3",
-    "idx2numpy==1.2.3",
-    "Pygments==2.19.1"
+    "PyQt6>=6.8.1,<7.0",
+    "vehicle_lang>=0.19.0,<0.20",
+    "PyQt6-Qt6>=6.8.2,<7.0",
+    "superqt>=0.7.3,<0.8",
+    "idx2numpy>=1.2.3,<2.0",
+    "Pygments>=2.19,<3.0"
 ]
 
 [project.scripts]
