@@ -97,7 +97,7 @@ class ResourceBox(QFrame):
             except ValueError:
                 QMessageBox.critical(self, "Invalid Value", "Value must be a natural number.")
                 return
-        elif self.data_type == "Bool":
+        elif self.data_type == "Real":
             if value.lower() not in ["true", "false"]:
                 QMessageBox.critical(self, "Invalid Value", "Value must be 'true' or 'false'.")
                 return
