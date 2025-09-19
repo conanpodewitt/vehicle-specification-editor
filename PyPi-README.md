@@ -8,7 +8,7 @@ A graphical user interface for editing, compiling, and verifying Vehicle languag
 - **File Operations**: New, Open, Save for specification files
 - **Compilation**: Compile specifications with view of query graph
 - **Verification**: Run verification using Marabou
-- **Resource Management**: Load networks, datasets, and parameters
+- **Resource Management**: Load networks, datasets, and parameters using filesystem
 - **Counterexamples**: Visual representation of counterexamples and witnesses
 
 ## Requirements

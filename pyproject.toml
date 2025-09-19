@@ -3,10 +3,10 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vehicle_gui"
-version = "0.1.0"
+name = "vehicle-gui"
+version = "0.1.1"
 description = "A GUI frontend for the vehicle command line tool"
-readme = "README.md"
+readme = "PyPi-README.md"
 requires-python = ">=3.10"
 dependencies = [
     "PyQt6==6.8.1",
