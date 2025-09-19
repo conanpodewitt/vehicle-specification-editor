@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vehicle_gui"
+version = "0.1.0"
+description = "A GUI frontend for the vehicle command line tool"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "PyQt6==6.8.1",
+    "vehicle_lang==0.19.0",
+    "PyQt6-Qt6==6.8.2",
+    "superqt==0.7.3",
+    "idx2numpy==1.2.3",
+    "Pygments==2.19.1"
+]
+
+[project.scripts]
+vehicle-gui = "ui.__main__:main"
+
+[project.entry-points."pygments.lexers"]
+external = "external:ExternalLexer"
+
