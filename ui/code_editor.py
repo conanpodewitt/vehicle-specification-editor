@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QPlainTextEdit, QWidget
 from PyQt6.QtCore import Qt, QRect, QSize
 from PyQt6.QtGui import QColor, QPainter, QFontDatabase
+from PyQt6.QtGui import QPen
 
 class CodeEditor(QPlainTextEdit):
     """Custom editor with line numbers"""
@@ -88,11 +89,16 @@ class CodeEditor(QPlainTextEdit):
         """Paint editor normally, then draw rules above and below the current line"""
         super().paintEvent(event)
         painter = QPainter(self.viewport())
-        painter.setPen(QColor(200, 200, 200))
+
+        color = QColor(200, 200, 200, 20)  
+        pen = QPen(color, 2, Qt.SolidLine)
+        painter.setPen(pen)
+
         cursor = self.textCursor()
         block = cursor.block()
         block_geo = self.blockBoundingGeometry(block).translated(self.contentOffset())
         top = block_geo.top()
         bottom = top + self.blockBoundingRect(block).height() - 4
+        
         painter.drawLine(0, int(top), self.viewport().width(), int(top))
         painter.drawLine(0, int(bottom), self.viewport().width(), int(bottom))
