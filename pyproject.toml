@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vehicle-gui"
-version = "0.1.2"
+version = "0.1.3"
 description = "A GUI frontend for the vehicle command line tool"
 readme = "PyPi-README.md"
 requires-python = ">=3.10"
