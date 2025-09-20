@@ -1,8 +1,0 @@
-{
-    "cache": {
-        "location": "test/image-cache"
-    },
-    "counterExampleRender" : [
-        "mnist_image"
-    ]
-}
