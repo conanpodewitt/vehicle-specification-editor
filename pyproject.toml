@@ -20,5 +20,8 @@ dependencies = [
 vehicle-gui = "ui.__main__:main"
 
 [project.entry-points."pygments.lexers"]
-external = "ui.external:ExternalLexer"
+external = "ui.external.lexer:ExternalLexer"
+
+[project.entry-points."pygments.styles"]
+vse-style = "ui.external.vse_style:VSE"
 
