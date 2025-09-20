@@ -160,7 +160,7 @@ class VCLEditor(QMainWindow):
         mono.setPointSize(14)
         self.editor.setFont(mono)
         self.editor.setPlaceholderText("Enter your Vehicle specification here...")
-        self.highlighter = CodeSyntaxHighlight(self.editor.document(), "external", "vs")    # Added syntax highlighting
+        self.highlighter = CodeSyntaxHighlight(self.editor.document(), "external", "vse-style")
         editor_console_splitter.addWidget(self.editor) # Add editor to splitter
 
         # Create the new console area, containing the problems and output tabs
