@@ -481,6 +481,7 @@ class VCLEditor(QMainWindow):
         self._start_vcl_operation("compile")
 
     def verify_spec(self):
+        self.compile_spec() # Always compile before verifying
         self._start_vcl_operation("verify")
 
     # --- Resource Management ---
