@@ -12,7 +12,7 @@ import functools
 import glob
 from typing import Callable
 
-from ui.code_editor import CodeEditor
+from ui.code_editor import CodeEditor, ExtendedSyntaxHighlight
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.query_tab import QueryTab
@@ -156,12 +156,11 @@ class VCLEditor(QMainWindow):
         editor_console_splitter = QSplitter(Qt.Orientation.Vertical)
 
         # Create left editor 
-        self.editor = CodeEditor()
+        self.editor = CodeEditor(lang="external", theme="vse-style")
         mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         mono.setPointSize(14)
         self.editor.setFont(mono)
         self.editor.setPlaceholderText("Enter your Vehicle specification here...")
-        self.highlighter = CodeSyntaxHighlight(self.editor.document(), "external", "vse-style")
         editor_console_splitter.addWidget(self.editor) # Add editor to splitter
 
         # Create the new console area, containing the problems and output tabs
@@ -332,21 +331,27 @@ class VCLEditor(QMainWindow):
                 self.editor.setPlainText(file.read())
             self.status_bar.showMessage(f"Opened: {file_path}", 3000)
             self.set_vcl_path(file_path)
+
+            if not self.is_valid_vcl():
+                return
+            self.generate_resource_boxes()      # Regenerate resource inputs for the new file
+
         except Exception as e: 
             QMessageBox.critical(self, "Open File Error", f"Could not open file: {e}")
             self.file_path_label.setText("Error opening file")
-            self.clear_resource_boxes() # Clear resources if file fails to load
+            self.clear_resource_boxes()         # Clear resources if file fails to load
 
     def save_file(self):
         current_file_path = self.vcl_path
-        if not current_file_path: # If no path, it's a "Save As"
+
+        # If no path, it's a "Save As"
+        if not current_file_path:      
             file_path, _ = QFileDialog.getSaveFileName(
                 self, "Save Vehicle Specification", "", "VCL Files (*.vcl);;All Files (*)"
             )
             if not file_path:
-                return 
+                return False
             current_file_path = file_path
-        
         try:
             with open(current_file_path, 'w', encoding='utf-8') as file:
                 file.write(self.editor.toPlainText())
@@ -357,6 +362,16 @@ class VCLEditor(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Save File Error", f"Could not save file: {e}")
             self.append_to_problems(f"Error saving file: {e}")
+            self.clear_resource_boxes()
+            return False   
+        
+        if not self.is_valid_vcl():
+            self.clear_resource_boxes()
+            return False
+        self.regenerate_resource_boxes()
+
+        # Save succeeded
+        return True                            
 
     def save_before_operation(self):
         if not self.vcl_path or self.editor.document().isModified():
@@ -369,12 +384,8 @@ class VCLEditor(QMainWindow):
                 self, "Save File", msg,
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
             )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.save_file()
-                return bool(self.vcl_path) and not self.editor.document().isModified()
-            else:
-                return False
-        return True
+            return reply == QMessageBox.StandardButton.Yes and self.save_file()
+        return self.save_file()
     
     # --- Verifier Management ---
 
@@ -559,6 +570,38 @@ class VCLEditor(QMainWindow):
     def show_version(self):
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
 
+    def regenerate_resource_boxes(self):
+        """Regenerate resource boxes, preserving any already-set values."""
+        old_boxes = {box.name: box for box in self.resource_boxes}
+        self.generate_resource_boxes()
+        for box in self.resource_boxes:
+            old_box = old_boxes.get(box.name)
+            if old_box and old_box.is_loaded:
+                box.is_loaded = True
+                if box.type in ["network", "dataset"]:
+                    box.path = old_box.path
+                    box.input_box.setText(old_box.input_box.text())
+                    box.input_box.setToolTip(old_box.input_box.toolTip())
+                elif box.type == "parameter":
+                    box.value = old_box.value
+                    if old_box.value is not None:
+                        box.input_box.setText(str(old_box.value))
+
+    # --- Type Checking ---
+
+    def is_valid_vcl(self):
+        self.problems_console.clear()
+        self.editor.clear_errors()
+        errors = self.vcl_bindings.type_check()
+        if errors:
+            for error in errors:
+                self.append_to_problems(f"Problem: {error['problem']}")
+                self.append_to_problems(f"Fix: {error['fix']}")
+                self.append_to_problems(f"Provenance: {error['provenance']['contents']}")
+            self.editor.add_errors(errors)
+            return False
+        return True
+
     # --- Utility Methods ---
 
     def set_vcl_path(self, path):
@@ -567,7 +610,6 @@ class VCLEditor(QMainWindow):
         self.vcl_path = path
         self.file_path_label.setText(f"File: {os.path.basename(path)}")
         self.query_tab.clear() # Clear previous output for new file
-        self.generate_resource_boxes() # Regenerate resource inputs for the new file
 
     def update_cursor_position(self):
         cursor = self.editor.textCursor()
