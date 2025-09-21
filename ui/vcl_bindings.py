@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import vehicle_lang as vcl
 import json
@@ -116,6 +117,34 @@ class VCLBindings:
 			finish_fn=finish_fn,
 			stop_event=stop_event,
 		))
+
+	def type_check(self):
+		"""Type check a VCL specification. Temporary method until vehicle_lang type-checking is fixed."""
+		try:
+			vcl.list_resources(self._vcl_path)
+		except VehicleError as e:
+			error_str = str(e)
+			error_json = json.loads(error_str)
+			if "provenance" not in error_json:
+				# error is not JSON formatted. This is a syntax error caught by BNFC parser
+				match = re.search(r"line (\d+), column (\d+)", error_str)
+				if match:
+					line, column = [int(g) for g in match.groups()]
+					start_col = max(1, column - 3)
+					end_col = column + 2
+
+					error_json = [{
+						"provenance": {
+							"tag": "Provenance",
+							"contents": [line, start_col, line, end_col]
+						},
+						"problem": "Syntax Error",
+						"fix": f"fix {error_json}"
+					}]
+			if not isinstance(error_json, list):
+				error_json = [error_json]
+			return error_json
+		return []
 
 	def resources(self):
 		"""Get the resources used by the VCLBindings"""
