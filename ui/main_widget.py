@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, Q
                              QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox,
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
                              QTabWidget, QProgressBar, QApplication)
-from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool
+from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, QTimer
 from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
 import functools
@@ -358,15 +358,25 @@ class VCLEditor(QMainWindow):
             QMessageBox.critical(self, "Save File Error", f"Could not save file: {e}")
             self.append_to_problems(f"Error saving file: {e}")
 
-    def append_to_log(self, message: str):
-        self.log_console.append(message)
-        self.log_console.ensureCursorVisible()
-        self.console_tab_widget.setCurrentWidget(self.log_console)
+    def save_before_operation(self):
+        if not self.vcl_path or self.editor.document().isModified():
+            if not self.vcl_path:
+                 msg = "The file needs to be saved before this operation. Save now?"
+            else:
+                 msg = "The file has been modified. Save changes before this operation?"
+            
+            reply = QMessageBox.question(
+                self, "Save File", msg,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_file()
+                return bool(self.vcl_path) and not self.editor.document().isModified()
+            else:
+                return False
+        return True
     
-    def append_to_problems(self, message: str):
-        self.problems_console.append(message)
-        self.problems_console.ensureCursorVisible()
-        self.console_tab_widget.setCurrentWidget(self.problems_console)
+    # --- Verifier Management ---
 
     def set_verifier_from_button(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -393,24 +403,6 @@ class VCLEditor(QMainWindow):
                 except Exception as e:
                     self.append_to_problems(f"Error setting verifier from PATH: {e}")
         self.append_to_log("Marabou not found in system PATH.")
-
-    def save_before_operation(self):
-        if not self.vcl_path or self.editor.document().isModified():
-            if not self.vcl_path:
-                 msg = "The file needs to be saved before this operation. Save now?"
-            else:
-                 msg = "The file has been modified. Save changes before this operation?"
-            
-            reply = QMessageBox.question(
-                self, "Save File", msg,
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.save_file()
-                return bool(self.vcl_path) and not self.editor.document().isModified()
-            else:
-                return False
-        return True
 
     # --- Compilation and Verification ---
 
@@ -567,6 +559,8 @@ class VCLEditor(QMainWindow):
     def show_version(self):
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
 
+    # --- Utility Methods ---
+
     def set_vcl_path(self, path):
         self.vcl_bindings.clear() # Clear any old bindings/data
         self.vcl_bindings.vcl_path = path
@@ -602,3 +596,13 @@ class VCLEditor(QMainWindow):
 
         if QApplication.instance():
             QApplication.instance().quit()
+
+    def append_to_log(self, message: str):
+        self.log_console.append(message)
+        self.log_console.ensureCursorVisible()
+        self.console_tab_widget.setCurrentWidget(self.log_console)
+    
+    def append_to_problems(self, message: str):
+        self.problems_console.append(message)
+        self.problems_console.ensureCursorVisible()
+        self.console_tab_widget.setCurrentWidget(self.problems_console)
