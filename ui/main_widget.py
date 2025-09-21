@@ -9,8 +9,8 @@ from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPo
 from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
 import functools
-from typing import Callable
 import glob
+from typing import Callable
 
 from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
@@ -84,6 +84,7 @@ class VCLEditor(QMainWindow):
         self.operation_signals.finished.connect(self._gui_operation_finished)
 
         self.show_ui()
+        self.set_verifier_from_PATH() # Attempt to set verifier from PATH on startup
 
     def show_ui(self):
         """Initialize UI"""
@@ -103,7 +104,7 @@ class VCLEditor(QMainWindow):
 
         # Add set verifier, compile, and verify buttons
         verifier_btn = QPushButton(QIcon.fromTheme("computer"), "Set Verifier")
-        verifier_btn.clicked.connect(self.set_verifier)
+        verifier_btn.clicked.connect(self.set_verifier_from_button)
         file_toolbar.addWidget(verifier_btn)
 
         self.compile_button = QPushButton(QIcon.fromTheme("scanner"), "Compile")
@@ -303,7 +304,7 @@ class VCLEditor(QMainWindow):
         self.verifier_label = QLabel("No Verifier Set")
         self.verifier_label.setContentsMargins(0, 0, 10, 0)
         self.verifier_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.verifier_label.mouseReleaseEvent = lambda event: self.set_verifier()
+        self.verifier_label.mouseReleaseEvent = lambda event: self.set_verifier_from_button()
         self.status_bar.addPermanentWidget(self.verifier_label)
 
         # Connect cursor movements to update the position indicator
@@ -355,9 +356,19 @@ class VCLEditor(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Save File Error", f"Could not save file: {e}")
-            self.problems_console.append(f"Error saving file: {e}")
+            self.append_to_problems(f"Error saving file: {e}")
 
-    def set_verifier(self):
+    def append_to_log(self, message: str):
+        self.log_console.append(message)
+        self.log_console.ensureCursorVisible()
+        self.console_tab_widget.setCurrentWidget(self.log_console)
+    
+    def append_to_problems(self, message: str):
+        self.problems_console.append(message)
+        self.problems_console.ensureCursorVisible()
+        self.console_tab_widget.setCurrentWidget(self.problems_console)
+
+    def set_verifier_from_button(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Marabou Verifier", "", "Marabou Verifier (Marabou*);;All Files (*)"
         )
@@ -366,6 +377,22 @@ class VCLEditor(QMainWindow):
         self.vcl_bindings.verifier_path = file_path
         self.verifier_label.setText(f"Verifier: {os.path.basename(file_path)}")
         self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
+
+    def set_verifier_from_PATH(self):
+        """Attempt to find Marabou in system PATH and set it as the verifier."""
+        for path in os.getenv("PATH", "").split(os.pathsep):
+            parent_dir = os.path.dirname(path)
+            bin_files = glob.glob(os.path.join(parent_dir, "Marabou"))
+            marabou_path = next((f for f in bin_files if os.path.isfile(f) and os.access(f, os.X_OK)), None)
+            if marabou_path is not None:
+                try:
+                    self.vcl_bindings.verifier_path = marabou_path
+                    self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_path)}")
+                    self.append_to_log(f"Marabou found in PATH: {marabou_path}")
+                    return
+                except Exception as e:
+                    self.append_to_problems(f"Error setting verifier from PATH: {e}")
+        self.append_to_log("Marabou not found in system PATH.")
 
     def save_before_operation(self):
         if not self.vcl_path or self.editor.document().isModified():
@@ -412,14 +439,14 @@ class VCLEditor(QMainWindow):
 
         if return_code == 0: # Success
             self.status_bar.showMessage(f"{self.current_operation.capitalize()} completed successfully.", 5000)
-            self.log_console.append(f"\n--- {self.current_operation.capitalize()} finished successfully. ---")
+            self.append_to_log(f"\n--- {self.current_operation.capitalize()} finished successfully. ---")
         elif return_code == -1: # Stopped by user
             self.status_bar.showMessage(f"{self.current_operation.capitalize()} stopped by user.", 5000)
-            self.problems_console.append(f"\n--- {self.current_operation.capitalize()} stopped by user. ---")
+            self.append_to_log(f"\n--- {self.current_operation.capitalize()} stopped by user. ---")
             if self.console_tab_widget: self.console_tab_widget.setCurrentWidget(self.problems_console)
         else: # Error
             self.status_bar.showMessage(f"Error during {self.current_operation.capitalize()}. Check Problems tab.", 5000)
-            self.problems_console.append(f"\n--- {self.current_operation.capitalize()} failed. ---")
+            self.append_to_problems(f"\n--- {self.current_operation.capitalize()} failed. ---")
             if self.console_tab_widget: self.console_tab_widget.setCurrentWidget(self.problems_console)
 
         self.query_tab.refresh_properties()
@@ -476,13 +503,13 @@ class VCLEditor(QMainWindow):
                 try:
                     os.remove(os.path.join(root, name))
                 except Exception as e:
-                    self.problems_console.append(f"Error clearing cache file {name}: {e}")
+                    self.append_to_problems(f"Error clearing cache file {name}: {e}")
         self.query_tab.refresh_properties()
         self._start_vcl_operation("compile")
 
     def verify_spec(self):
         self.compile_spec() # Always compile before verifying
-        
+
         while self.current_operation == "compile":
             QApplication.processEvents() # Wait for compilation to finish
 
@@ -518,7 +545,7 @@ class VCLEditor(QMainWindow):
 
         except Exception as e:
             tb_str = traceback.format_exc()
-            self.problems_console.append(f"Error generating resource boxes: {e}\n{tb_str}")
+            self.append_to_problems(f"Error generating resource boxes: {e}\n{tb_str}")
             self.console_tab_widget.setCurrentWidget(self.problems_console)
 
     def assign_resources(self):
@@ -535,7 +562,7 @@ class VCLEditor(QMainWindow):
                         self.vcl_bindings.set_parameter(box.name, box.value)
                 except Exception as e:
                     QMessageBox.warning(self, "Resource Assignment Error", f"Error assigning resource {box.name}: {e}")
-                    self.problems_console.append(f"Error assigning resource {box.name}: {e}")
+                    self.append_to_problems(f"Error assigning resource {box.name}: {e}")
 
     def show_version(self):
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
