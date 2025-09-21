@@ -482,7 +482,12 @@ class VCLEditor(QMainWindow):
 
     def verify_spec(self):
         self.compile_spec() # Always compile before verifying
-        self._start_vcl_operation("verify")
+        
+        while self.current_operation == "compile":
+            QApplication.processEvents() # Wait for compilation to finish
+
+        if self.current_operation is None: # Only verify if compile succeeded
+            self._start_vcl_operation("verify")
 
     # --- Resource Management ---
 
