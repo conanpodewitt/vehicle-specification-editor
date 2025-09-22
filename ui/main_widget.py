@@ -113,6 +113,7 @@ class VCLEditor(QMainWindow):
 
         self.verify_button = QPushButton(QIcon.fromTheme("media-playback-start"), "Verify")
         self.verify_button.clicked.connect(self.verify_spec)
+        self.verify_button.isEnabled = False
         file_toolbar.addWidget(self.verify_button)
 
         # Add stop button for running operations
@@ -396,6 +397,7 @@ class VCLEditor(QMainWindow):
         if not file_path:
             return
         self.vcl_bindings.verifier_path = file_path
+        self.verify_button.isEnabled = True
         self.verifier_label.setText(f"Verifier: {os.path.basename(file_path)}")
         self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
 
@@ -410,6 +412,7 @@ class VCLEditor(QMainWindow):
                     self.vcl_bindings.verifier_path = marabou_path
                     self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_path)}")
                     self.append_to_log(f"Marabou found in PATH: {marabou_path}")
+                    self.verify_button.isEnabled = True
                     return
                 except Exception as e:
                     self.append_to_problems(f"Error setting verifier from PATH: {e}")
