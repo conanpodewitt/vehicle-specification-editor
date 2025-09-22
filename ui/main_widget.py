@@ -186,7 +186,7 @@ class VCLEditor(QMainWindow):
 
         # Create the Counter Examples tab
         self.counter_example_tab = CounterExampleTab(mode=RenderMode.IMAGE)
-        main_tab.addTab(self.counter_example_tab, "Counter Examples")
+        main_tab.addTab(self.counter_example_tab, " Results")
 
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
         editor_console_splitter.setStretchFactor(0, 3)
