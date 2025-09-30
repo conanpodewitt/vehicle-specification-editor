@@ -3,6 +3,9 @@ import os
 from PyQt6.QtWidgets import QApplication
 from ui.main_widget import VCLEditor
 from ui.vcl_bindings import CACHE_DIR
+import signal
+
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 
