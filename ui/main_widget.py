@@ -21,6 +21,7 @@ from ui.vcl_bindings import CACHE_DIR
 
 from vehicle_lang import VERSION 
 
+RELEASE_VERSION = "0.1.3"
 
 class OperationSignals(QObject):
     """
@@ -290,9 +291,19 @@ class VCLEditor(QMainWindow):
         self.status_bar.addPermanentWidget(sep_group2)
         
         # Version label
-        self.version_label = QLabel(f"Vehicle Version: {VERSION}")
-        self.version_label.setContentsMargins(0, 0, 0, 0)
-        self.status_bar.addPermanentWidget(self.version_label)
+        self.gui_version_label = QLabel(f"VSE Version: {RELEASE_VERSION}")
+        self.gui_version_label.setContentsMargins(0, 0, 0, 0)
+        self.status_bar.addPermanentWidget(self.gui_version_label)
+
+        # Separator between VSE version and vehicle version
+        sep_vse_verifier = QFrame()
+        sep_vse_verifier.setFrameShape(QFrame.Shape.VLine)
+        sep_vse_verifier.setFrameShadow(QFrame.Shadow.Sunken)
+        self.status_bar.addPermanentWidget(sep_vse_verifier)
+        
+        self.vehicle_version_label = QLabel(f"Vehicle Version: {VERSION}")
+        self.vehicle_version_label.setContentsMargins(0, 0, 0, 0)
+        self.status_bar.addPermanentWidget(self.vehicle_version_label)
 
         # Separator between version and verifier
         sep_verifier = QFrame()
