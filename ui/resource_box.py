@@ -85,7 +85,7 @@ class ResourceBox(QFrame):
     def set_value(self):
         value = self.input_box.text()
         """Set the value of the parameter"""
-        if self.data_type == "Rat":
+        if self.data_type == "Real":
             try:
                 value = float(value)
             except ValueError:
@@ -97,7 +97,7 @@ class ResourceBox(QFrame):
             except ValueError:
                 QMessageBox.critical(self, "Invalid Value", "Value must be a natural number.")
                 return
-        elif self.data_type == "Real":
+        elif self.data_type == "Bool":
             if value.lower() not in ["true", "false"]:
                 QMessageBox.critical(self, "Invalid Value", "Value must be 'true' or 'false'.")
                 return
