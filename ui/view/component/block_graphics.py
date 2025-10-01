@@ -95,6 +95,8 @@ class BlockGraphics(QGraphicsItem):
 
         # Init title card after setting the correct widget width
         self.init_title()
+        if isinstance(self.block_ref, QueryBlock):
+            self.setToolTip("Double click to view the query")
 
     def init_flags(self):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
@@ -106,10 +108,13 @@ class BlockGraphics(QGraphicsItem):
 
     def hoverEnterEvent(self, event: 'QGraphicsSceneHoverEvent') -> None:
         self.hover = True
+        if isinstance(self.block_ref, QueryBlock):
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.update()
 
     def hoverLeaveEvent(self, event: 'QGraphicsSceneHoverEvent') -> None:
         self.hover = False
+        self.setCursor(Qt.CursorShape.ArrowCursor)
         self.update()
 
     def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
