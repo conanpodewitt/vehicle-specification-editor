@@ -1,4 +1,5 @@
 import os
+import site
 import traceback 
 import asyncio
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget,
@@ -414,15 +415,21 @@ class VCLEditor(QMainWindow):
 
     def set_verifier_from_PATH(self):
         """Attempt to find Marabou in system PATH and set it as the verifier."""
-        for path in os.getenv("PATH", "").split(os.pathsep):
-            parent_dir = path#os.path.dirname(path)
-            bin_files = glob.glob(os.path.join(parent_dir, "Marabou"))
-            marabou_path = next((f for f in bin_files if os.path.isfile(f) and os.access(f, os.X_OK)), None)
-            if marabou_path is not None:
+        # Get parent directories
+        PATH_dirs = os.environ.get("PATH", "").split(os.pathsep)
+        PYTHONPATH_dirs = os.environ.get("PYTHONPATH", "").split(os.pathsep)
+        site_dirs = site.getsitepackages() + [site.getusersitepackages()]
+
+        for path in PATH_dirs + PYTHONPATH_dirs + site_dirs:
+            parent_dir = os.path.dirname(path)
+            marabou_paths = glob.glob("Marabou", root_dir=parent_dir, recursive=True)
+            marabou_paths = [os.path.join(parent_dir, f) for f in marabou_paths]
+            marabou_paths = [f for f in marabou_paths if os.path.isfile(f) and os.access(f, os.X_OK)]
+            if marabou_paths != []:
                 try:
-                    self.vcl_bindings.verifier_path = marabou_path
-                    self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_path)}")
-                    self.append_to_log(f"Marabou found in PATH: {marabou_path}")
+                    self.vcl_bindings.verifier_path = marabou_paths[0]
+                    self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_paths[0])}")
+                    self.append_to_log(f"Marabou found in PATH: {marabou_paths[0]}")
                     self.verify_button.setEnabled(True)
                     return
                 except Exception as e:
