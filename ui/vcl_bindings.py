@@ -17,22 +17,26 @@ class Runner:
 
 	def build_command(self, command: str, args: Sequence[str], kwargs: dict) -> list[str]:
 		cmd = [sys.executable, "-u", self.script_path, command]
-
-		# Add positional arguments
 		cmd.extend(args)
 
-		# Add keyword arguments as --option value
+		# Keyword is --option
 		for option, value in kwargs.items():
 			flag = f"--{option.replace('_', '-')}"
-			# Handle networks, datasets, and parameters, which are dictionaries of name-value pairs
+			# Handle networks, datasets, and parameters, which requires flag to be repeated for each name-value pair
 			if isinstance(value, dict):
-				for name, value in value.items():
+				for name, val in value.items():
 					cmd.append(flag)
-					cmd.append(f"{name}:{value}")
+					cmd.append(f"{name}:{val}")
+			# Handle properties, which requires flag to be repeated for each property
+			elif isinstance(value, list):
+				for item in value:
+					cmd.append(flag)
+					cmd.append(str(item))
+			# Handle other parameters
 			else:
 				cmd.append(flag)
 				cmd.append(str(value))
-
+				
 		return cmd
 
 	async def run(self, line_reader: Callable, finish_fn: Callable, stop_event: asyncio.Event) -> str:
@@ -82,6 +86,7 @@ class VCLBindings:
 		self._networks = {}
 		self._datasets = {}
 		self._parameters = {}
+		self._properties = []
 
 	def compile(self, callback_fn: Callable, finish_fn: Callable, stop_event: asyncio.Event):
 		"""Compile a VCL specification"""
@@ -101,7 +106,8 @@ class VCLBindings:
 		))
 	
 	def verify(self, callback_fn: Callable, finish_fn: Callable, stop_event: asyncio.Event):	
-		"""Verify a VCL specification"""		
+		"""Verify a VCL specification"""	
+		print(f"[DEBUG] Verifying with command: vehicle verify --specification {self._vcl_path} --verifier Marabou --verifier-location {self._verifier_path} --network {self._networks} --dataset {self._datasets} --parameter {self._parameters} --cache {CACHE_DIR} --property {self._properties}")	
 		runner = Runner(
 			command="verify", 
 			specification=self._vcl_path, 
@@ -111,6 +117,7 @@ class VCLBindings:
 			dataset=self._datasets,
 			parameter=self._parameters,
 			cache=CACHE_DIR,
+			property=self._properties,
 		)
 		asyncio.run(runner.run(
 			line_reader=callback_fn, 
@@ -151,6 +158,13 @@ class VCLBindings:
 		vcl_output = vcl.list_resources(self._vcl_path)
 		if not vcl_output:
 			raise VehicleError("No resources found in VCL file. Something is wrong.")
+		return json.loads(vcl_output)
+
+	def properties(self):
+		"""Get the properties in the VCL specification"""
+		vcl_output = vcl.list_properties(self._vcl_path)
+		if not vcl_output:
+			return []
 		return json.loads(vcl_output)
 
 	@property
@@ -197,9 +211,14 @@ class VCLBindings:
 		"""Add a property to the VCLBindings"""
 		self._parameters[name] = value
 
+	def set_properties(self, properties: list[str]):
+		"""Set the list of properties to verify"""
+		self._properties = properties
+
 	def clear(self):
 		"""Clear all networks, datasets, and properties"""
 		self._networks.clear()
 		self._datasets.clear()
 		self._parameters.clear()
+		self._properties.clear()
 		self._vcl_path = None
