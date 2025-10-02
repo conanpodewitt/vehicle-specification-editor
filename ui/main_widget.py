@@ -347,7 +347,7 @@ class VCLEditor(QMainWindow):
             self.clear_resource_boxes()         # Clear resources if file fails to load
 
         # Load properties
-        self.load_properties()
+        self.regenerate_properties()
 
     def save_file(self):
         current_file_path = self.vcl_path
@@ -376,7 +376,13 @@ class VCLEditor(QMainWindow):
         if not self.is_valid_vcl():
             self.clear_resource_boxes()
             return False
-        self.regenerate_resource_boxes()
+        old_boxes = {box.name: box for box in self.resource_boxes}
+        self.regenerate_resource_boxes(old_boxes)
+
+        # Remember selected properties
+        selected_properties = self.property_selector.selected_properties()
+        self.regenerate_properties(selected_properties)
+
         return True                            
 
     def save_before_operation(self):
@@ -581,24 +587,13 @@ class VCLEditor(QMainWindow):
                     QMessageBox.warning(self, "Resource Assignment Error", f"Error assigning resource {box.name}: {e}")
                     self.append_to_problems(f"Error assigning resource {box.name}: {e}")
 
-    def load_properties(self):
-        """Load properties from VCL file into the property selector."""
-        if not self.vcl_path:
-            return
-        try:
-            properties = self.vcl_bindings.properties()
-            self.property_selector.load_properties(properties)
-        except Exception as e:
-            tb_str = traceback.format_exc()
-            self.append_to_problems(f"Error loading properties: {e}\n{tb_str}")
-            self.console_tab_widget.setCurrentWidget(self.problems_console)
-
     def show_version(self):
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
 
-    def regenerate_resource_boxes(self):
+    def regenerate_resource_boxes(self, old_boxes=None):
         """Regenerate resource boxes, preserving any already-set values."""
-        old_boxes = {box.name: box for box in self.resource_boxes}
+        if old_boxes is None:
+            old_boxes = {}
         self.load_resources()
         for box in self.resource_boxes:
             old_box = old_boxes.get(box.name)
@@ -612,6 +607,22 @@ class VCLEditor(QMainWindow):
                     box.value = old_box.value
                     if old_box.value is not None:
                         box.input_box.setText(str(old_box.value))
+
+    def regenerate_properties(self, selected_properties=None):
+        """Regenerate property selector, preserving any previously selected values."""
+        try:
+            properties = self.vcl_bindings.properties()
+            self.property_selector.load_properties(properties)
+
+            if selected_properties is not None:
+                for prop_name, item in self.property_selector.property_items:
+                    # By default, all items are unchecked. Uncheck those not in selected_properties
+                    if prop_name not in selected_properties:
+                        item.setCheckState(Qt.CheckState.Unchecked)
+        except Exception as e:
+            tb_str = traceback.format_exc()
+            self.append_to_problems(f"Error loading properties: {e}\n{tb_str}")
+            self.console_tab_widget.setCurrentWidget(self.problems_console)
 
     # --- Type Checking ---
 
