@@ -12,6 +12,7 @@ from superqt.utils import CodeSyntaxHighlight
 import functools
 import glob
 from typing import Callable
+import shutil
 
 from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
@@ -426,26 +427,14 @@ class VCLEditor(QMainWindow):
 
     def set_verifier_from_PATH(self):
         """Attempt to find Marabou in system PATH and set it as the verifier."""
-        # Get parent directories
-        PATH_dirs = os.environ.get("PATH", "").split(os.pathsep)
-        PYTHONPATH_dirs = os.environ.get("PYTHONPATH", "").split(os.pathsep)
-        site_dirs = site.getsitepackages() + [site.getusersitepackages()]
-
-        for path in PATH_dirs + PYTHONPATH_dirs + site_dirs:
-            parent_dir = os.path.dirname(path)
-            marabou_paths = glob.glob("Marabou", root_dir=parent_dir, recursive=True)
-            marabou_paths = [os.path.join(parent_dir, f) for f in marabou_paths]
-            marabou_paths = [f for f in marabou_paths if os.path.isfile(f) and os.access(f, os.X_OK)]
-            if marabou_paths != []:
-                try:
-                    self.vcl_bindings.verifier_path = marabou_paths[0]
-                    self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_paths[0])}")
-                    self.append_to_log(f"Marabou found in PATH: {marabou_paths[0]}")
-                    self.verify_button.setEnabled(True)
-                    return
-                except Exception as e:
-                    self.append_to_problems(f"Error setting verifier from PATH: {e}")
-        self.append_to_log("Marabou not found in system PATH.")
+        marabou_exec = shutil.which("Marabou")
+        if marabou_exec:
+            self.vcl_bindings.verifier_path = marabou_exec
+            self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_exec)}")
+            self.append_to_log(f"Marabou found: {marabou_exec}")
+            self.verify_button.setEnabled(True)
+        else:
+            self.append_to_log("Marabou not found in PATH.")
 
     # --- Compilation and Verification ---
 
