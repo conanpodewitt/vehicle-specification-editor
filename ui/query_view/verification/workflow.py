@@ -11,10 +11,10 @@ from PyQt6.QtGui import QPen, QColor, QBrush
 
 from .blocks import PropertyBlock, WitnessBlock, QueryBlock, PropertyQuantifier, Status, AndBlock, OrBlock
 from ..base_types import Scene, Socket
-from ..graphics_view import GraphicsView
-from ..component.block_graphics import BlockGraphics
-from ..component.socket_graphics import SocketGraphics
-from ..component.edge_graphics import BezierEdgeGraphics
+from ..graphics.graphics_view import GraphicsView
+from ..graphics.block_graphics import BlockGraphics
+from ..graphics.socket_graphics import SocketGraphics
+from ..graphics.edge_graphics import BezierEdgeGraphics
 from ..base_types import SocketType
 import ui.view.styling.dimension as dim
 
