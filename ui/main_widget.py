@@ -12,11 +12,12 @@ import functools
 import glob
 from typing import Callable
 
-from ui.code_editor import CodeEditor, ExtendedSyntaxHighlight
+from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.query_tab import QueryTab
 from ui.counter_example_tab import CounterExampleTab, RenderMode
+from ui.property_selection_widget import PropertySelectionWidget
 from ui.vcl_bindings import CACHE_DIR
 
 from vehicle_lang import VERSION 
@@ -221,13 +222,16 @@ class VCLEditor(QMainWindow):
         resource_scroll_area.setWidget(resource_scroll_content)
         right_layout.addWidget(resource_scroll_area)
 
-        # Create output area
-        output_label = QLabel("Output")
-        output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        font = output_label.font()
+        # Property selection widget
+        properties_label = QLabel("Properties")
+        properties_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        font = properties_label.font()
         font.setPointSize(14)
-        output_label.setFont(font)
-        output_layout.addWidget(output_label)
+        properties_label.setFont(font)
+        right_layout.addWidget(properties_label)
+
+        self.property_selector = PropertySelectionWidget()
+        right_layout.addWidget(self.property_selector)
         
         # Create output box
         self.query_tab = QueryTab()
@@ -335,12 +339,15 @@ class VCLEditor(QMainWindow):
 
             if not self.is_valid_vcl():
                 return
-            self.generate_resource_boxes()      # Regenerate resource inputs for the new file
+            self.load_resources()               # Regenerate resource inputs and properties
 
         except Exception as e: 
             QMessageBox.critical(self, "Open File Error", f"Could not open file: {e}")
             self.file_path_label.setText("Error opening file")
             self.clear_resource_boxes()         # Clear resources if file fails to load
+
+        # Load properties
+        self.load_properties()
 
     def save_file(self):
         current_file_path = self.vcl_path
@@ -359,7 +366,7 @@ class VCLEditor(QMainWindow):
             self.status_bar.showMessage(f"Saved: {current_file_path}", 3000)
             self.set_vcl_path(current_file_path)
             self.editor.document().setModified(False) 
-
+        
         except Exception as e:
             QMessageBox.critical(self, "Save File Error", f"Could not save file: {e}")
             self.append_to_problems(f"Error saving file: {e}")
@@ -370,8 +377,6 @@ class VCLEditor(QMainWindow):
             self.clear_resource_boxes()
             return False
         self.regenerate_resource_boxes()
-
-        # Save succeeded
         return True                            
 
     def save_before_operation(self):
@@ -469,13 +474,16 @@ class VCLEditor(QMainWindow):
             return
 
         self.assign_resources()
-        if operation_name == "verify" and not self.vcl_bindings.verifier_path:
-            QMessageBox.warning(self, "Verification Error", "Please set the verifier path first.")
-            return
-        
         if not all(box.is_loaded for box in self.resource_boxes):
             QMessageBox.warning(self, "Resource Error", "Please load all required resources (networks, datasets, parameters) before compilation/verification")
             return
+        
+        if operation_name == "verify":
+            selected_properties = self.property_selector.selected_properties()
+            self.vcl_bindings.set_properties(selected_properties)
+            if not selected_properties:
+                QMessageBox.warning(self, "No Properties Selected", "Please select at least one property to verify.")
+                return
 
         self.status_bar.showMessage(f"Performing {operation_name.capitalize()}... Please wait.", 0)
         self.compile_button.setEnabled(False)
@@ -519,8 +527,10 @@ class VCLEditor(QMainWindow):
         while self.current_operation == "compile":
             QApplication.processEvents() # Wait for compilation to finish
 
-        if self.current_operation is None: # Only verify if compile succeeded
-            self._start_vcl_operation("verify")
+        if not self.vcl_bindings.verifier_path:
+            QMessageBox.warning(self, "Verification Error", "Please set the verifier path first.")
+            return
+        self._start_vcl_operation("verify")
 
     # --- Resource Management ---
 
@@ -532,10 +542,12 @@ class VCLEditor(QMainWindow):
                 widget.deleteLater()
         self.resource_boxes.clear()
 
-    def generate_resource_boxes(self):
+    def load_resources(self):
         self.clear_resource_boxes()
         if not self.vcl_path:
             return
+        
+        # Generate resource boxes
         try:
             resources = self.vcl_bindings.resources()
             for entry in resources:
@@ -548,7 +560,6 @@ class VCLEditor(QMainWindow):
                 box = ResourceBox(name, type_, data_type=data_type)
                 self.resource_layout.addWidget(box)
                 self.resource_boxes.append(box)
-
         except Exception as e:
             tb_str = traceback.format_exc()
             self.append_to_problems(f"Error generating resource boxes: {e}\n{tb_str}")
@@ -570,13 +581,25 @@ class VCLEditor(QMainWindow):
                     QMessageBox.warning(self, "Resource Assignment Error", f"Error assigning resource {box.name}: {e}")
                     self.append_to_problems(f"Error assigning resource {box.name}: {e}")
 
+    def load_properties(self):
+        """Load properties from VCL file into the property selector."""
+        if not self.vcl_path:
+            return
+        try:
+            properties = self.vcl_bindings.properties()
+            self.property_selector.load_properties(properties)
+        except Exception as e:
+            tb_str = traceback.format_exc()
+            self.append_to_problems(f"Error loading properties: {e}\n{tb_str}")
+            self.console_tab_widget.setCurrentWidget(self.problems_console)
+
     def show_version(self):
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
 
     def regenerate_resource_boxes(self):
         """Regenerate resource boxes, preserving any already-set values."""
         old_boxes = {box.name: box for box in self.resource_boxes}
-        self.generate_resource_boxes()
+        self.load_resources()
         for box in self.resource_boxes:
             old_box = old_boxes.get(box.name)
             if old_box and old_box.is_loaded:
