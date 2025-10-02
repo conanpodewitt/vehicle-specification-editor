@@ -78,3 +78,7 @@ class PropertySelectionWidget(QWidget):
         total = self.list.count()
         selected = len(self.selected_properties())
         self.status_label.setText(f"{selected} / {total} selected")
+
+    @property
+    def property_items(self):
+        return self._prop_items
