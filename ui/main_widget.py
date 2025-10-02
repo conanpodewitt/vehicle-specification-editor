@@ -605,11 +605,11 @@ class VCLEditor(QMainWindow):
             old_box = old_boxes.get(box.name)
             if old_box and old_box.is_loaded:
                 box.is_loaded = True
-                if box.type in ["network", "dataset"]:
+                if box.type in ["Network", "Dataset"]:
                     box.path = old_box.path
                     box.input_box.setText(old_box.input_box.text())
                     box.input_box.setToolTip(old_box.input_box.toolTip())
-                elif box.type == "parameter":
+                elif box.type == "Parameter":
                     box.value = old_box.value
                     if old_box.value is not None:
                         box.input_box.setText(str(old_box.value))

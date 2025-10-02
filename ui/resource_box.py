@@ -21,7 +21,7 @@ class ResourceBox(QFrame):
         self.name = name
         self.data_type = data_type
 
-        if type_ == "network" or type_ == "dataset":
+        if type_ == "Network" or type_ == "Dataset":
             input_layout = QHBoxLayout()
             self.input_box = QLineEdit()
             self.input_box.setPlaceholderText(f"No {type_} loaded")
@@ -37,9 +37,7 @@ class ResourceBox(QFrame):
             input_layout.setSpacing(4)
             layout.addLayout(input_layout)
 
-        elif type_ == "parameter":
-            # TODO: Fix `vehicle list resources` to not show inferred parameters
-            self.is_loaded = True   # Parameters are considered loaded by default since they may be optional
+        elif type_ == "Parameter":
             self.value = None       # Unset value is None
 
             self.input_box = QLineEdit()
