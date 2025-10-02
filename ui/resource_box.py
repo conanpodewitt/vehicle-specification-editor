@@ -8,7 +8,7 @@ class ResourceBox(QFrame):
         super().__init__()
         self.setObjectName("ResourceBox")
         layout = QVBoxLayout()
-        title = QLabel(f"{type_.capitalize()}: {name}")
+        title = QLabel(f"{type_}: {name}")
         mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         mono.setPointSize(11)
         mono.setWeight(QFont.Weight.Bold)

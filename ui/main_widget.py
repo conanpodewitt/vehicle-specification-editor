@@ -564,9 +564,9 @@ class VCLEditor(QMainWindow):
         try:
             resources = self.vcl_bindings.resources()
             for entry in resources:
-                name = entry.get("entityName")
-                type_ = entry.get("entitySort", "").lstrip("@")
-                data_type = entry.get("entityType", None)
+                name = entry.get("name")
+                type_ = entry.get("tag")
+                data_type = entry.get("typeText", None)
                 if not name or not type_:
                     print(f"Skipping resource entry with missing name or type: {entry}")
                     continue
@@ -583,12 +583,11 @@ class VCLEditor(QMainWindow):
         for box in self.resource_boxes:
             if box.is_loaded: # is_loaded should correctly reflect if a value/path is set
                 try:
-                    if box.type == "network":
+                    if box.type == "Network":
                         self.vcl_bindings.set_network(box.name, box.path)
-                    elif box.type == "dataset":
+                    elif box.type == "Dataset":
                         self.vcl_bindings.set_dataset(box.name, box.path)
-                    # Only set parameter if value is not None (i.e., has been set). This allows optional (inferred) parameters.
-                    elif box.type == "parameter" and box.value is not None:
+                    elif box.type == "Parameter":
                         self.vcl_bindings.set_parameter(box.name, box.value)
                 except Exception as e:
                     QMessageBox.warning(self, "Resource Assignment Error", f"Error assigning resource {box.name}: {e}")

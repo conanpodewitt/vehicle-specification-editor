@@ -6,6 +6,7 @@ import json
 import asyncio
 from vehicle_lang import VehicleError
 from typing import Sequence, Optional, Callable
+from ui.vcl_utils import get_resources_info
 
 
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".vehicle")
@@ -155,7 +156,7 @@ class VCLBindings:
 
 	def resources(self):
 		"""Get the resources used by the VCLBindings"""
-		vcl_output = vcl.list_resources(self._vcl_path)
+		vcl_output = get_resources_info(self._vcl_path)
 		if not vcl_output:
 			raise VehicleError("No resources found in VCL file. Something is wrong.")
 		return json.loads(vcl_output)
