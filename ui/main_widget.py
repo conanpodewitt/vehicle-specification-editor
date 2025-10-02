@@ -18,7 +18,7 @@ from ui.code_editor import CodeEditor
 from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.query_tab import QueryTab
-from ui.counter_example_tab import CounterExampleTab, RenderMode
+from ui.counter_example_view.counter_example_tab import CounterExampleTab
 from ui.property_selection_widget import PropertySelectionWidget
 from ui.vcl_bindings import CACHE_DIR
 
@@ -189,7 +189,7 @@ class VCLEditor(QMainWindow):
         main_widget.addWidget(self.console_tab_widget)
 
         # Create the Counter Examples tab
-        self.counter_example_tab = CounterExampleTab(mode=RenderMode.IMAGE)
+        self.counter_example_tab = CounterExampleTab()
         main_tab.addTab(self.counter_example_tab, " Results")
 
         # Set the size policy for the editor and the console: editor takes 3/4 of the space
@@ -451,7 +451,7 @@ class VCLEditor(QMainWindow):
 
         # Refresh properties in query tab after any output
         if self.current_operation == "verify":
-            self.counter_example_tab.load_counter_examples_from_folder()
+            self.counter_example_tab.load_counter_examples()
 
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
