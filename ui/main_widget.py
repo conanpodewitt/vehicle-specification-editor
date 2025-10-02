@@ -426,7 +426,7 @@ class VCLEditor(QMainWindow):
     def set_verifier_from_PATH(self):
         """Attempt to find Marabou in system PATH and set it as the verifier."""
         for path in os.getenv("PATH", "").split(os.pathsep):
-            parent_dir = os.path.dirname(path)
+            parent_dir = path#os.path.dirname(path)
             bin_files = glob.glob(os.path.join(parent_dir, "Marabou"))
             marabou_path = next((f for f in bin_files if os.path.isfile(f) and os.access(f, os.X_OK)), None)
             if marabou_path is not None:
