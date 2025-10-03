@@ -1,12 +1,12 @@
 # Contributor Guide
 
-To get an overview of the project, read the [README](../README.md) file.
+To get an overview of the project, read the [README](./README.md) file.
 
 ## Issues
 
-#### Create a new issue
+#### Create a new issue\
 
-If encounter a problem or bug, [search if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments). If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/conanpodewitt/vehicle-specification-editor/issues/new).
+If encounter a problem or bug, [search if an issue already exists](https://github.com/conanpodewitt/vehicle-specification-editor/issues). If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/conanpodewitt/vehicle-specification-editor/issues/new).
 
 #### Solving an issue
 
