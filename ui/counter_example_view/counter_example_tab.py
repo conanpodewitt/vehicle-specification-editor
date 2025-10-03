@@ -6,8 +6,6 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-import numpy as np
-from enum import Enum
 from typing import List, Type, Dict
 from collections import OrderedDict
 
@@ -53,10 +51,10 @@ def decode_counter_examples(cache_dir: str = CACHE_DIR) -> dict:
 class CounterExampleWidget(QWidget):
     """Widget for displaying individual counterexamples with navigation."""
 
-    def __init__(self, modes: Dict[str, List[BaseRenderer]] = {}, parent=None):
+    def __init__(self, parent=None):
         """Initialize the counterexample widget. Modes is a dict of variable names to lists of renderers supported for that variable."""
         super().__init__(parent)
-        self.modes = OrderedDict(modes)
+        self.modes = OrderedDict()  # variable name -> list of renderers
         self.data_map = {}
         self.ce_paths = []
         self.ce_current_index = 0
@@ -77,16 +75,7 @@ class CounterExampleWidget(QWidget):
         nav_layout.addWidget(self.name_label)
         nav_layout.addWidget(self.next_button)
 
-        # Content display
-        self.var_index = {}     # Map variable names to starting index in stacked layout
-        ind = 0
-        for var_name in self.modes:
-            self.var_index[var_name] = ind
-            ind += len(self.modes[var_name])
-
         self.stack = QStackedLayout()
-        for mode in self.modes.values():
-            self.stack.addWidget(mode)
 
         # Main layout
         main_layout = QVBoxLayout()
@@ -98,7 +87,7 @@ class CounterExampleWidget(QWidget):
         self.prev_button.clicked.connect(self._go_previous)
         self.next_button.clicked.connect(self._go_next)
 
-    def set_modes(self, modes):
+    def set_modes(self, modes: Dict[str, List[BaseRenderer]]):
         """Set the rendering modes."""
         self.modes = OrderedDict(modes)
         self.var_index = {}
@@ -114,17 +103,15 @@ class CounterExampleWidget(QWidget):
                 widget.setParent(None)
         for mode_list in self.modes.values():
             for renderer in mode_list:
-                self.stack.addWidget(renderer)
-
-    def set_mode(self, mode: int):
-        """Set the rendering mode."""
-        self.stack.setCurrentIndex(mode)
+                self.stack.addWidget(renderer.widget)
 
     def set_data(self, data: dict):
         """Set the counterexample data."""
         self.data_map = data
         self.ce_paths = list(data.keys())
         self.ce_current_index = 0
+        if self.ce_paths:
+            self.var_name = self.ce_paths[0].split('-')[-1]
         self.update_display()
 
     def update_display(self):
@@ -142,11 +129,12 @@ class CounterExampleWidget(QWidget):
         content = self.data_map[key]
         self.name_label.setText(f"{key}")
 
-        # Render based on mode
-        try:
-            self.stack.currentWidget().render(content)
-        except Exception as e:
-            self.name_label.setText(f"Error rendering {key}: {e}")
+        # Render the data for all modes of the current variable
+        for renderer in self.modes.get(self.var_name, []):
+            try:
+                renderer.render(content)
+            except Exception as e:
+                print(f"Error rendering {self.var_name} with {renderer}: {e}")
 
     def _go_previous(self):
         """Navigate to previous counterexample."""
@@ -180,9 +168,8 @@ class CounterExampleWidget(QWidget):
 
     def _get_modes_for_var(self, var_name: str) -> List[str]:
         """Get the list of rendering modes available for a given variable."""
-        if var_name in self.modes:
-            return [type(renderer).__name__ for renderer in self.modes[var_name]]
-        return []
+        renderers = self.modes.get(var_name, self.modes.get("default", []))
+        return [type(renderer).__name__ for renderer in renderers]
 
 
 class CounterExampleTab(QWidget):
@@ -217,12 +204,12 @@ class CounterExampleTab(QWidget):
         self.layout.addLayout(control_layout)
 
         # Content widget
-        self.content_widget = CounterExampleWidget()
+        self.content_widget = CounterExampleWidget(parent=self)
         self.content_widget.set_data(counter_examples_json)
         self.layout.addWidget(self.content_widget)
         self.setLayout(self.layout)
 
-    def set_modes(self, modes):
+    def set_modes(self, modes: Dict[str, List[BaseRenderer]]):
         """Set the rendering modes for variables."""
         self.modes = OrderedDict(modes)
         self.content_widget.set_modes(modes)
@@ -239,7 +226,7 @@ class CounterExampleTab(QWidget):
         """Change the rendering mode."""
         mode_index = self.mode_selector.currentIndex()
         stack_index = self.content_widget.var_index[self.var_name] + mode_index
-        self.content_widget.set_mode(stack_index)
+        self.content_widget.stack.setCurrentIndex(stack_index)
 
     def _select_folder(self):
         """Open folder selection dialog."""
