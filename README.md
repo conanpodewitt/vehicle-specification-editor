@@ -1,6 +1,7 @@
 # Vehicle Specification Editor
 
-A graphical user interface for editing, compiling, and verifying Vehicle language specifications.
+A graphical user interface for editing, compiling, and verifying Vehicle language specifications. \
+This application is built off the vehicle python bindings to display and demo the functionality of [Vehicle](https://github.com/vehicle-lang/vehicle)
 
 ## Features
 
@@ -14,7 +15,7 @@ A graphical user interface for editing, compiling, and verifying Vehicle languag
 ## Requirements
 
 - Python 3.10+
-- Marabou verifier (for verification)
+- [Marabou](https://github.com/NeuralNetworkVerification/Marabou) verifier (for verification)
 
 ## Usage
 
