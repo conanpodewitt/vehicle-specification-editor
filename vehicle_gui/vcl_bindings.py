@@ -6,8 +6,8 @@ import json
 import asyncio
 from vehicle_lang import VehicleError
 from typing import Sequence, Optional, Callable
-from ui.vcl_utils import get_resources_info
-from ui.vcl_utils import get_properties_info
+from vehicle_gui.vcl_utils import get_resources_info
+from vehicle_gui.vcl_utils import get_properties_info
 
 
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".vehicle")

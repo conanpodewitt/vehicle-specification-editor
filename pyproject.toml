@@ -17,13 +17,13 @@ dependencies = [
 ]
 
 [project.scripts]
-vehicle_gui = "ui.__main__:main"
+vehicle_gui = "vehicle_gui.__main__:main"
 
 [project.entry-points."pygments.lexers"]
-external = "ui.external.lexer:ExternalLexer"
+external = "vehicle_gui.external.lexer:ExternalLexer"
 
 [project.entry-points."pygments.styles"]
-vse-style = "ui.external.vse_style:VSE"
+vse-style = "vehicle_gui.external.vse_style:VSE"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -22,7 +22,7 @@ Please create an issue as detailed above, then label the issue with `bug`
 ### Exectution
 
 Because the application is packaged for PyPi, it may not be obvious how to execute the application from it's source code.   
-If the requirements are met the GUI can be launch via running ``python3 -m ui`` in the root directory of the repo \
+If the requirements are met the GUI can be launch via running ``python3 -m vehicle_gui`` in the root directory of the repo \
 It's advisable to run ``pip install .`` first as this will ensure you have the correct packages installed and that the pygment plugin is present.
 
 
