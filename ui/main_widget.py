@@ -21,6 +21,8 @@ from ui.counter_example_view.counter_example_tab import CounterExampleTab
 from ui.resource_view.resource_box import ResourceBox
 from ui.resource_view.property_selection_widget import PropertySelectionWidget
 from ui.vcl_bindings import CACHE_DIR
+from ui.counter_example_view.extract_renderers import initialise_custom_renderers
+from ui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
 
 from vehicle_lang import VERSION 
 
@@ -361,7 +363,8 @@ class VCLEditor(QMainWindow):
 
         # Load properties
         self.regenerate_properties()
-
+        self.update_counter_example_modes()
+    
     def save_file(self):
         current_file_path = self.vcl_path
 
@@ -395,7 +398,7 @@ class VCLEditor(QMainWindow):
         # Remember selected properties
         selected_properties = self.property_selector.selected_properties()
         self.regenerate_properties(selected_properties)
-
+        self.update_counter_example_modes()
         return True                            
 
     def save_before_operation(self):
@@ -451,7 +454,7 @@ class VCLEditor(QMainWindow):
 
         # Refresh properties in query tab after any output
         if self.current_operation == "verify":
-            self.counter_example_tab.load_counter_examples()
+            self.counter_example_tab.refresh_from_cache()
 
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
@@ -472,8 +475,10 @@ class VCLEditor(QMainWindow):
             self.status_bar.showMessage(f"Error during {self.current_operation.capitalize()}. Check Problems tab.", 5000)
             self.append_to_problems(f"\n--- {self.current_operation.capitalize()} failed. ---")
             if self.console_tab_widget: self.console_tab_widget.setCurrentWidget(self.problems_console)
-
+        
         self.query_tab.refresh_properties()
+        if self.current_operation == "verify":
+            self.counter_example_tab.refresh_from_cache()
         self.current_operation = None
 
     def stop_current_operation(self):
@@ -487,7 +492,8 @@ class VCLEditor(QMainWindow):
             return
 
         self.assign_resources()
-        if not all(box.is_loaded for box in self.resource_boxes):
+        loaded_resources = [box.name for box in self.resource_boxes if box.is_loaded and box.type != "Variable"]
+        if not all(loaded_resources):
             QMessageBox.warning(self, "Resource Error", "Please load all required resources (networks, datasets, parameters) before compilation/verification")
             return
         
@@ -693,3 +699,17 @@ class VCLEditor(QMainWindow):
         self.problems_console.append(message)
         self.problems_console.ensureCursorVisible()
         self.console_tab_widget.setCurrentWidget(self.problems_console)
+
+    def update_counter_example_modes(self):
+        """Update counter example modes based on loaded variable resources."""
+        base_renderers = [GSImageRenderer(), TextRenderer()]
+        modes = {}
+        for box in self.resource_boxes:
+            if box.type == 'variable' and box.is_loaded:
+                try:
+                    custom_renderers = initialise_custom_renderers(box.path)
+                    modes[box.name] = base_renderers + custom_renderers
+                except Exception as e:
+                    print(f"Error loading renderers for {box.name}: {e}")
+                    modes[box.name] = base_renderers
+        self.counter_example_tab.set_modes(modes)

@@ -174,6 +174,7 @@ class VCLBindings:
 		result = get_properties_info(self._vcl_path)
 		if not result:
 			return []
+		result = json.loads(result)
 		vars = set()
 		for item in result:
 			vars = vars.union(set(item["quantifiedVariablesInfo"]))
