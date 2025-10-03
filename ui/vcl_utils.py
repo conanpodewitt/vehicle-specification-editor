@@ -65,7 +65,9 @@ def get_properties_info(specification: Union[str, Path]) -> str:
         properties_info = []
         for item in properties_json:
             quantified_var_names = [var["sharedData"]["name"] for var in item["contents"]["quantifiedVariables"]]
-            properties_info.append({"name": item["contents"]["sharedData"]["name"], "quantifiedVariablesInfo": quantified_var_names})
+            properties_info.append({"name": item["contents"]["sharedData"]["name"], 
+                                    "quantifiedVariablesInfo": quantified_var_names,
+                                    "type": item["contents"]["sharedData"]["typeText"]})
         return json.dumps(properties_info, indent=2)
     except VehicleError as e:
         raise VehicleError(f"Error getting properties info: {e}")
