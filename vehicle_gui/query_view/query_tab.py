@@ -5,12 +5,12 @@ from PyQt6.QtWidgets import QTabWidget, QTextEdit, QTabBar, QSizePolicy, QWidget
 from PyQt6.QtCore import pyqtSignal
 from pathlib import Path
 
-from ui.query_view.verification.blocks import Status, PropertyQuantifier
-from ui.query_view.graphics.block_graphics import BlockGraphics
-from ui.query_view.graphics.graphics_scene import GraphicsScene
-from ui.query_view.graphics.graphics_view import GraphicsView
-from ui.query_view.verification import VerificationWorkflow
-from ui.vcl_bindings import CACHE_DIR
+from vehicle_gui.query_view.verification.blocks import Status, PropertyQuantifier
+from vehicle_gui.query_view.graphics.block_graphics import BlockGraphics
+from vehicle_gui.query_view.graphics.graphics_scene import GraphicsScene
+from vehicle_gui.query_view.graphics.graphics_view import GraphicsView
+from vehicle_gui.query_view.verification import VerificationWorkflow
+from vehicle_gui.vcl_bindings import CACHE_DIR
 
 
 class PropertyLoader:

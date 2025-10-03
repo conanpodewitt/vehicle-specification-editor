@@ -6,7 +6,7 @@ This is a stop-gap until we develop a threaded solution inside of the Vehicle co
 """
 
 from vehicle_lang.session import Session
-from ui.vcl_bindings import CACHE_DIR
+from vehicle_gui.vcl_bindings import CACHE_DIR
 import sys
 import os
 

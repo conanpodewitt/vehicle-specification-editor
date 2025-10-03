@@ -9,8 +9,8 @@ from PyQt6.QtGui import QIcon
 from typing import List, Type, Dict
 from collections import OrderedDict
 
-from ui.vcl_bindings import CACHE_DIR
-from ui.counter_example_view.base_renderer import *
+from vehicle_gui.vcl_bindings import CACHE_DIR
+from vehicle_gui.counter_example_view.base_renderer import *
 
 
 def _vehicle_type(dtype: str) -> str:

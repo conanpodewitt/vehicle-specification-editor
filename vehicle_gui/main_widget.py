@@ -14,15 +14,15 @@ import glob
 from typing import Callable, OrderedDict
 import shutil
 
-from ui.code_editor import CodeEditor
-from ui.vcl_bindings import VCLBindings
-from ui.query_view.query_tab import QueryTab
-from ui.counter_example_view.counter_example_tab import CounterExampleTab
-from ui.resource_view.resource_box import ResourceBox
-from ui.resource_view.property_selection_widget import PropertySelectionWidget
-from ui.vcl_bindings import CACHE_DIR
-from ui.counter_example_view.extract_renderers import initialise_custom_renderers
-from ui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
+from vehicle_gui.code_editor import CodeEditor
+from vehicle_gui.vcl_bindings import VCLBindings
+from vehicle_gui.query_view.query_tab import QueryTab
+from vehicle_gui.counter_example_view.counter_example_tab import CounterExampleTab
+from vehicle_gui.resource_view.resource_box import ResourceBox
+from vehicle_gui.resource_view.property_selection_widget import PropertySelectionWidget
+from vehicle_gui.vcl_bindings import CACHE_DIR
+from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
+from vehicle_gui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
 
 from vehicle_lang import VERSION 
 
@@ -709,7 +709,7 @@ class VCLEditor(QMainWindow):
             modes[box.name] = []
             if box.is_loaded:
                 try:
-                    custom_renderers = initialise_custom_renderers(box.path)
+                    custom_renderers = load_renderer_classes(box.path)
                     modes[box.name] += custom_renderers
                 except Exception as e:
                     print(f"Error loading renderers for {box.name}: {e}")
