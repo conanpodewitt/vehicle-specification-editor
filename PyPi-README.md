@@ -19,7 +19,7 @@ A graphical user interface for editing, compiling, and verifying Vehicle languag
 ## Usage
 
 ```bash
-vehicle-gui
+vehicle_gui
 ```
 
 1. Open a Vehicle specification file (.vcl)

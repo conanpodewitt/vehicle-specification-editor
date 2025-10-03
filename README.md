@@ -20,7 +20,7 @@ This application is built off the vehicle python bindings to display and demo th
 ## Usage
 
 ```bash
-vehicle-gui
+vehicle_gui
 ```
 
 1. Open a Vehicle specification file (.vcl)
