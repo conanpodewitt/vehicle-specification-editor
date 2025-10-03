@@ -3,25 +3,28 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vehicle-gui"
-version = "0.1.3"
+name = "vehicle_gui"
+version = "0.0.1"
 description = "A GUI frontend for the vehicle command line tool"
 readme = "PyPi-README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 dependencies = [
-    "PyQt6>=6.7.0,<7.0",
-    "vehicle_lang>=0.17.0,<0.20",
-    "superqt>=0.7.0,<0.8",
-    "idx2numpy>=1.2.0,<1.5",
-    "Pygments>=2.18.0,<3.0"
+    "PyQt6>=6.7.0",
+    "vehicle_lang>=0.17.0",
+    "superqt>=0.7.0",
+    "idx2numpy>=1.2.0",
+    "Pygments>=2.18.0"
 ]
 
 [project.scripts]
-vehicle-gui = "ui.__main__:main"
+vehicle_gui = "ui.__main__:main"
 
 [project.entry-points."pygments.lexers"]
 external = "ui.external.lexer:ExternalLexer"
 
 [project.entry-points."pygments.styles"]
 vse-style = "ui.external.vse_style:VSE"
+
+[tool.setuptools.packages.find]
+where = ["."]
 
