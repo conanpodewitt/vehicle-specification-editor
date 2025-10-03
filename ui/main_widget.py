@@ -11,7 +11,7 @@ from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
 import functools
 import glob
-from typing import Callable
+from typing import Callable, OrderedDict
 import shutil
 
 from ui.code_editor import CodeEditor
@@ -394,11 +394,11 @@ class VCLEditor(QMainWindow):
             return False
         old_boxes = {box.name: box for box in self.resource_boxes}
         self.regenerate_resource_boxes(old_boxes)
+        self.update_counter_example_modes()
 
         # Remember selected properties
         selected_properties = self.property_selector.selected_properties()
         self.regenerate_properties(selected_properties)
-        self.update_counter_example_modes()
         return True                            
 
     def save_before_operation(self):
@@ -703,13 +703,15 @@ class VCLEditor(QMainWindow):
     def update_counter_example_modes(self):
         """Update counter example modes based on loaded variable resources."""
         base_renderers = [GSImageRenderer(), TextRenderer()]
-        modes = {}
-        for box in self.resource_boxes:
-            if box.type == 'variable' and box.is_loaded:
+        modes = OrderedDict()
+        variable_boxes = [box for box in self.resource_boxes if box.type == 'Variable']
+        for box in variable_boxes:
+            modes[box.name] = []
+            if box.is_loaded:
                 try:
                     custom_renderers = initialise_custom_renderers(box.path)
-                    modes[box.name] = base_renderers + custom_renderers
+                    modes[box.name] += custom_renderers
                 except Exception as e:
                     print(f"Error loading renderers for {box.name}: {e}")
-                    modes[box.name] = base_renderers
+            modes[box.name] += base_renderers
         self.counter_example_tab.set_modes(modes)
