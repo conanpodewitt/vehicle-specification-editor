@@ -21,7 +21,7 @@ class ResourceBox(QFrame):
         self.name = name
         self.data_type = data_type
 
-        if type_ == "Network" or type_ == "Dataset":
+        if type_ == "Network" or type_ == "Dataset" or type_ == "Variable":
             input_layout = QHBoxLayout()
             self.input_box = QLineEdit()
             self.input_box.setPlaceholderText(f"No {type_} loaded")
@@ -32,7 +32,7 @@ class ResourceBox(QFrame):
             self.load_btn = QPushButton()
             self.load_btn.setIcon(QIcon.fromTheme("folder"))
             self.load_btn.setFixedSize(32, 32)
-            self.load_btn.clicked.connect(self.set_dataset)
+            self.load_btn.clicked.connect(self.set_path)
             input_layout.addWidget(self.load_btn)
             input_layout.setSpacing(4)
             layout.addLayout(input_layout)
@@ -55,23 +55,18 @@ class ResourceBox(QFrame):
             self.data_type = data_type
 
         self.setLayout(layout)
-    
-    def set_network(self):
-        """Open a network path"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Vehicle Specification", "", "ONNX Files (*.onnx);;All Files (*)"
-        )
-        if not file_path:
-            return
-        self.path = file_path
-        self.input_box.setText(os.path.basename(file_path))
-        self.input_box.setToolTip(file_path) # Show full path on hover
-        self.is_loaded = True
 
-    def set_dataset(self):
+    def set_path(self):
         """Open a dataset path"""
+        if self.type == "Network":
+            file_filter = "ONNX Files (*.onnx);;All Files (*)"
+        elif self.type == "Dataset":
+            file_filter = "All Files (*)"
+        elif self.type == "Variable":
+            file_filter = "Renderer modules (*.py);;All Files (*)"
+
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Dataset", "", "All Files (*)"
+            self, f"Open {self.type}", "", file_filter
         )
         if not file_path:
             return

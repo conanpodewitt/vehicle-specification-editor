@@ -15,11 +15,11 @@ from typing import Callable
 import shutil
 
 from ui.code_editor import CodeEditor
-from ui.resource_box import ResourceBox
 from ui.vcl_bindings import VCLBindings
 from ui.query_tab import QueryTab
 from ui.counter_example_view.counter_example_tab import CounterExampleTab
-from ui.property_selection_widget import PropertySelectionWidget
+from ui.resource_view.resource_box import ResourceBox
+from ui.resource_view.property_selection_widget import PropertySelectionWidget
 from ui.vcl_bindings import CACHE_DIR
 
 from vehicle_lang import VERSION 
@@ -563,7 +563,9 @@ class VCLEditor(QMainWindow):
         # Generate resource boxes
         try:
             resources = self.vcl_bindings.resources()
-            for entry in resources:
+            variables = self.vcl_bindings.variables()
+
+            for entry in resources + variables:
                 name = entry.get("name")
                 type_ = entry.get("tag")
                 data_type = entry.get("typeText", None)
@@ -573,6 +575,7 @@ class VCLEditor(QMainWindow):
                 box = ResourceBox(name, type_, data_type=data_type)
                 self.resource_layout.addWidget(box)
                 self.resource_boxes.append(box)
+                
         except Exception as e:
             tb_str = traceback.format_exc()
             self.append_to_problems(f"Error generating resource boxes: {e}\n{tb_str}")
@@ -605,10 +608,9 @@ class VCLEditor(QMainWindow):
             old_box = old_boxes.get(box.name)
             if old_box and old_box.is_loaded:
                 box.is_loaded = True
-                if box.type in ["Network", "Dataset"]:
+                if box.type in ["Network", "Dataset", "Variable"]:
                     box.path = old_box.path
                     box.input_box.setText(old_box.input_box.text())
-                    box.input_box.setToolTip(old_box.input_box.toolTip())
                 elif box.type == "Parameter":
                     box.value = old_box.value
                     if old_box.value is not None:

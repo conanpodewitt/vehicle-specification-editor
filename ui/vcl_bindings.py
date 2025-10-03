@@ -177,7 +177,7 @@ class VCLBindings:
 		vars = set()
 		for item in result:
 			vars = vars.union(set(item["quantifiedVariablesInfo"]))
-		return list(vars)
+		return [{"name": var, "tag": "Variable"} for var in vars]
 
 	@property
 	def vcl_path(self):
