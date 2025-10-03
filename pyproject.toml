@@ -10,7 +10,7 @@ readme = "PyPi-README.md"
 requires-python = ">=3.10"
 dependencies = [
     "PyQt6>=6.7.0,<7.0",
-    "vehicle_lang>=0.17.0,<0.20",
+    "vehicle_lang>=0.21.0",
     "superqt>=0.7.0,<0.8",
     "idx2numpy>=1.2.0,<1.5",
     "Pygments>=2.18.0,<3.0"
