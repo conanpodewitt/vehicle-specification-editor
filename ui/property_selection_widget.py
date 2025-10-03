@@ -36,7 +36,7 @@ class PropertySelectionWidget(QWidget):
         self.list.blockSignals(True)
         self.list.clear()
         for i, prop in enumerate(props):
-            display = f"{prop['entityName']} : {prop['entityType']}"
+            display = f"{prop['name']} : {prop['type']}"
             truncated = (display[:60] + "…") if len(display) > 60 else display
             item = QListWidgetItem(truncated)
             item.setToolTip(display)
@@ -44,7 +44,7 @@ class PropertySelectionWidget(QWidget):
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Checked)
             self.list.addItem(item)
-            self._prop_items.append((prop["entityName"], item))
+            self._prop_items.append((prop["name"], item))
         self.list.blockSignals(False)
         self._update_status()
         self._emit_selection()

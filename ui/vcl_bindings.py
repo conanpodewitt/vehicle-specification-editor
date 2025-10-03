@@ -7,6 +7,7 @@ import asyncio
 from vehicle_lang import VehicleError
 from typing import Sequence, Optional, Callable
 from ui.vcl_utils import get_resources_info
+from ui.vcl_utils import get_properties_info
 
 
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".vehicle")
@@ -108,7 +109,6 @@ class VCLBindings:
 	
 	def verify(self, callback_fn: Callable, finish_fn: Callable, stop_event: asyncio.Event):	
 		"""Verify a VCL specification"""	
-		print(f"[DEBUG] Verifying with command: vehicle verify --specification {self._vcl_path} --verifier Marabou --verifier-location {self._verifier_path} --network {self._networks} --dataset {self._datasets} --parameter {self._parameters} --cache {CACHE_DIR} --property {self._properties}")	
 		runner = Runner(
 			command="verify", 
 			specification=self._vcl_path, 
@@ -127,9 +127,10 @@ class VCLBindings:
 		))
 
 	def type_check(self):
-		"""Type check a VCL specification. Temporary method until vehicle_lang type-checking is fixed."""
+		"""Type check a VCL specification"""
 		try:
-			vcl.list_resources(self._vcl_path)
+			# Temporary method until type checking is fixed in vehicle_lang
+			vcl.list(self._vcl_path)
 		except VehicleError as e:
 			error_str = str(e)
 			error_json = json.loads(error_str)
@@ -163,10 +164,20 @@ class VCLBindings:
 
 	def properties(self):
 		"""Get the properties in the VCL specification"""
-		vcl_output = vcl.list_properties(self._vcl_path)
+		vcl_output = get_properties_info(self._vcl_path)
 		if not vcl_output:
 			return []
 		return json.loads(vcl_output)
+	
+	def variables(self):
+		"""Get the quantified variables listed in the VCL specification"""
+		result = get_properties_info(self._vcl_path)
+		if not result:
+			return []
+		vars = set()
+		for item in result:
+			vars = vars.union(set(item["quantifiedVariablesInfo"]))
+		return list(vars)
 
 	@property
 	def vcl_path(self):
