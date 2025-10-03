@@ -6,6 +6,7 @@ This is a stop-gap until we develop a threaded solution inside of the Vehicle co
 """
 
 from vehicle_lang.session import Session
+from ui.vcl_bindings import CACHE_DIR
 import sys
 import os
 
@@ -17,7 +18,7 @@ if __name__ == "__main__":
 	s = Session().__enter__()
 
 	# Run the command and get the output
-	log_path = os.path.join(os.path.dirname(__file__), "../temp", "log.txt")
+	log_path = os.path.join(os.path.dirname(__file__), CACHE_DIR, "log.txt")
 	try:
 		s.check_call(
 			[
