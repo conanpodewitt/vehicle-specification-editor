@@ -10,7 +10,7 @@ If encounter a problem or bug, [search if an issue already exists](https://githu
 
 #### Solving an issue
 
-Scan through our [existing issues](https://github.com/github/docs/issues) to find one that interests you. You can narrow down the search using `labels` as filters. Then create a new branch to work on the issue. As a general rule, we don’t assign issues to anyone. If you find an issue to work on, you are welcome to open a PR with a fix.
+Scan through our [existing issues](https://github.com/conanpodewitt/vehicle-specification-editor/issues) to find one that interests you. You can narrow down the search using `labels` as filters. Then create a new branch to work on the issue. As a general rule, we don’t assign issues to anyone. If you find an issue to work on, you are welcome to open a PR with a fix.
 
 #### Reporting a bug
 
