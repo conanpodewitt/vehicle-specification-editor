@@ -17,8 +17,8 @@ from PyQt6.QtGui import QPen, QColor, QPainter, QPolygonF, QPainterPath
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtWidgets import QGraphicsPathItem, QStyleOptionGraphicsItem
 
-import ui.view.styling.dimension as dim
-import ui.view.styling.palette as palette
+import ui.query_view.styling.dimension as dim
+import ui.query_view.styling.palette as palette
 from ..base_types import Edge, SocketType
 
 

@@ -11,8 +11,8 @@ from PyQt6.QtCore import QRectF
 from PyQt6.QtGui import QColor, QPen, QBrush, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem
 
-import ui.view.styling.dimension as dim
-import ui.view.styling.palette as palette
+import ui.query_view.styling.dimension as dim
+import ui.query_view.styling.palette as palette
 from ..base_types import Socket
 
 

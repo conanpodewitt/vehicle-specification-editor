@@ -16,8 +16,8 @@ from PyQt6.QtGui import QPen, QColor, QFont, QBrush, QPainterPath, QPainter
 from PyQt6.QtWidgets import QGraphicsItem, QWidget, QGraphicsProxyWidget, QGraphicsTextItem, QVBoxLayout, QGridLayout, \
     QHBoxLayout, QMessageBox, QStyleOptionGraphicsItem, QGraphicsSceneHoverEvent, QGraphicsSceneMouseEvent
 
-import ui.view.styling.dimension as dim
-import ui.view.styling.palette as palette
+import ui.query_view.styling.dimension as dim
+import ui.query_view.styling.palette as palette
 from ..verification.blocks import QueryBlock
 from ..base_types import Block
 

@@ -5,11 +5,11 @@ from PyQt6.QtWidgets import QTabWidget, QTextEdit, QTabBar, QSizePolicy, QWidget
 from PyQt6.QtCore import pyqtSignal
 from pathlib import Path
 
-from ui.view.verification.blocks import Status, PropertyQuantifier
-from ui.view.component.block_graphics import BlockGraphics
-from ui.view.graphics_scene import GraphicsScene
-from ui.view.graphics_view import GraphicsView
-from ui.view.verification import VerificationWorkflow
+from ui.query_view.verification.blocks import Status, PropertyQuantifier
+from ui.query_view.graphics.block_graphics import BlockGraphics
+from ui.query_view.graphics.graphics_scene import GraphicsScene
+from ui.query_view.graphics.graphics_view import GraphicsView
+from ui.query_view.verification import VerificationWorkflow
 from ui.vcl_bindings import CACHE_DIR
 
 

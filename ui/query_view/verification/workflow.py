@@ -16,7 +16,7 @@ from ..graphics.block_graphics import BlockGraphics
 from ..graphics.socket_graphics import SocketGraphics
 from ..graphics.edge_graphics import BezierEdgeGraphics
 from ..base_types import SocketType
-import ui.view.styling.dimension as dim
+import ui.query_view.styling.dimension as dim
 
 
 class VerificationWorkflow:

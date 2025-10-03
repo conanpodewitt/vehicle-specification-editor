@@ -12,7 +12,7 @@ from PyQt6.QtGui import QPainter
 from PyQt6 import QtGui
 from PyQt6.QtWidgets import QGraphicsView
 
-import ui.view.styling.dimension as dim
+import ui.query_view.styling.dimension as dim
 from .graphics_scene import GraphicsScene
 
 

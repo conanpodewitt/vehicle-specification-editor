@@ -13,8 +13,8 @@ from PyQt6.QtCore import QLine, pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QColor, QPen
 from PyQt6.QtWidgets import QGraphicsScene
 
-import ui.view.styling.dimension as dim
-import ui.view.styling.palette as palette
+import ui.query_view.styling.dimension as dim
+import ui.query_view.styling.palette as palette
 
 
 class GraphicsScene(QGraphicsScene):

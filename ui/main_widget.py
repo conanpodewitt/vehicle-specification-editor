@@ -16,7 +16,7 @@ import shutil
 
 from ui.code_editor import CodeEditor
 from ui.vcl_bindings import VCLBindings
-from ui.query_tab import QueryTab
+from ui.query_view.query_tab import QueryTab
 from ui.counter_example_view.counter_example_tab import CounterExampleTab
 from ui.resource_view.resource_box import ResourceBox
 from ui.resource_view.property_selection_widget import PropertySelectionWidget
