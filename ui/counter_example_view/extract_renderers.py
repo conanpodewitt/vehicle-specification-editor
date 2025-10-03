@@ -18,14 +18,11 @@ def load_renderer_classes(path: str) -> list[Type[BaseRenderer]]:
     return renderers
 
 
-def initialise_custom_renderers(paths: list[str]) -> list[BaseRenderer]:
-    renderer_classes = []
+def initialise_custom_renderers(path: str) -> list[BaseRenderer]:
+    renderer_classes = load_renderer_classes(path)
     renderer_objects = []
-
-    for path in paths:
-        renderer_classes.extend(load_renderer_classes(path))
     
     for Renderer in renderer_classes:
-        renderer_objects.append(Renderer.__init__())
-
+        renderer_objects.append(Renderer())
+        
     return renderer_objects
