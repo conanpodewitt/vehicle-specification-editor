@@ -43,7 +43,7 @@ def get_resources_info(specification: Union[str, Path]) -> str:
     """
     Get resources info from the specification.
     :param specification: The path to the Vehicle specification file to get resources info for.
-    :return: resources info.
+    :return: resources info of the form: [{"tag": "Network", "name": "net1", "typeText": "InputTensor -> OutputTensor"}, ...]
     """
     try:
         resources_json = json.loads(list_resources(specification))
@@ -58,7 +58,7 @@ def get_properties_info(specification: Union[str, Path]) -> str:
     """
     Get properties info from the specification.
     :param specification: The path to the Vehicle specification file to get properties info for.
-    :return: properties info.
+    :return: properties info of the form: [{"name": "prop1", "quantifiedVariablesInfo": ["var1", "var2"], "type": "Bool"}, ...]
     """
     try:
         properties_json = json.loads(list_properties(specification))
