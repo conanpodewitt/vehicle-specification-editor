@@ -24,6 +24,16 @@ def _vehicle_type(dtype: str) -> str:
     else:
         raise ValueError(f"Unsupported data type: {dtype}")
 
+def decode_counter_example(property_name : str, qvar_name : str, cache_dir: str = CACHE_DIR):
+    """Decode counter example from IDX file give property name and quantified variable name."""
+    if os.path.isdir(os.path.join(cache_dir, property_name)) and property_name.endswith("-assignments"):
+        full_path = os.path.join(cache_dir, property_name, f'"{qvar_name}"')
+        try:
+            tensor = idx2numpy.convert_from_file(full_path)
+            return tensor
+        except Exception as e:
+            print(f"Error decoding {full_path}: {e}")
+            return
 
 def decode_counter_examples(cache_dir: str = CACHE_DIR) -> dict:
     """Decode counterexamples from IDX files in assignment directories."""
@@ -64,16 +74,8 @@ class CounterExampleWidget(QWidget):
         self.name_label = QLabel("No data loaded")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.prev_button = QPushButton("◀")
-        self.prev_button.setFixedSize(32, 32)
-
-        self.next_button = QPushButton("▶")
-        self.next_button.setFixedSize(32, 32)
-
         nav_layout = QHBoxLayout()
-        nav_layout.addWidget(self.prev_button)
         nav_layout.addWidget(self.name_label)
-        nav_layout.addWidget(self.next_button)
 
         self.stack = QStackedLayout()
 
@@ -82,10 +84,6 @@ class CounterExampleWidget(QWidget):
         main_layout.addLayout(nav_layout)
         main_layout.addLayout(self.stack)
         self.setLayout(main_layout)
-
-        # Connect signals
-        self.prev_button.clicked.connect(self._go_previous)
-        self.next_button.clicked.connect(self._go_next)
 
     def set_modes(self, modes: Dict[str, List[BaseRenderer]]):
         """Set the rendering modes."""
@@ -118,12 +116,7 @@ class CounterExampleWidget(QWidget):
         """Update the display based on current data and mode."""
         if not self.ce_paths:
             self.name_label.setText("No data")
-            self.prev_button.hide()
-            self.next_button.hide()
             return
-
-        self.prev_button.show()
-        self.next_button.show()
 
         key = self.ce_paths[self.ce_current_index]
         content = self.data_map[key]
@@ -136,36 +129,6 @@ class CounterExampleWidget(QWidget):
             except Exception as e:
                 print(f"Error rendering {self.var_name} with {renderer}: {e}")
 
-    def _go_previous(self):
-        """Navigate to previous counterexample."""
-        if self.ce_current_index > 0:
-            self.ce_current_index -= 1
-        else:
-            self.ce_current_index = len(self.ce_paths) - 1
-
-        # Update variable name if quantified variable changed
-        key = self.ce_paths[self.ce_current_index]
-        self.var_name = key.split('-')[-1]
-
-        modes = self._get_modes_for_var(self.var_name)
-        self.parent_ref.set_combo_box(modes)
-        self.update_display()
-
-    def _go_next(self):
-        """Navigate to next counterexample."""
-        if self.ce_current_index < len(self.ce_paths) - 1:
-            self.ce_current_index += 1
-        else:
-            self.ce_current_index = 0
-        
-        # Update variable name if quantified variable changed
-        key = self.ce_paths[self.ce_current_index]
-        self.var_name = key.split('-')[-1]
-
-        modes = self._get_modes_for_var(self.var_name)
-        self.parent_ref.set_combo_box(modes)
-        self.update_display()
-
     def _get_modes_for_var(self, var_name: str) -> List[str]:
         """Get the list of rendering modes available for a given variable."""
         renderers = self.modes.get(var_name, self.modes.get("default", []))
@@ -176,32 +139,43 @@ class CounterExampleTab(QWidget):
     """Main tab widget for counterexample visualization."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.layout = QVBoxLayout()
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
 
-        # Control layout
-        control_layout = QHBoxLayout()
+        # Create side panel widget
+        side_panel = QVBoxLayout()
+        side_panel.setFixedWidth(200)
+        side_panel.setStyleSheet("border-right: 3px solid red;")
 
-        # Folder display
+        # Folder selection row
+        folder_row = QHBoxLayout()
+
+        # Folder button
+        self.folder_button = QPushButton()
+        self.folder_button.setIcon(QIcon.fromTheme("folder"))
+        self.folder_button.setFixedSize(32, 32)
+        self.folder_button.clicked.connect(self._select_folder)
+        folder_row.addWidget(self.folder_button)
+
+        # Folder label
         if os.path.exists(CACHE_DIR):
             self.folder_label = QLabel(CACHE_DIR)
             counter_examples_json = decode_counter_examples(CACHE_DIR)
         else:
             self.folder_label = QLabel("Cache directory not found")
-        control_layout.addWidget(self.folder_label)
+        self.folder_label.setWordWrap(True)
+        folder_row.addWidget(self.folder_label)
+
+        # Add folder row to the main layout
+        side_panel.addLayout(folder_row)
 
         # Mode selector
         self.mode_selector = QComboBox()
-        self.mode_selector.setFixedWidth(100)
         self.mode_selector.currentTextChanged.connect(self._change_mode)
-        control_layout.addWidget(self.mode_selector)
+        side_panel.addWidget(self.mode_selector)
 
-        # Folder selection button
-        self.folder_button = QPushButton()
-        self.folder_button.setIcon(QIcon.fromTheme("folder"))
-        self.folder_button.setFixedSize(32, 32)
-        self.folder_button.clicked.connect(self._select_folder)
-        control_layout.addWidget(self.folder_button)
-        self.layout.addLayout(control_layout)
+        # Add side panel to main layout
+        self.layout.addWidget(side_panel)
 
         # Content widget
         self.content_widget = CounterExampleWidget(parent=self)
