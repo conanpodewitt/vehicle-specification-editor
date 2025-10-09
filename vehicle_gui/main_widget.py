@@ -135,7 +135,7 @@ class VCLEditor(QMainWindow):
         # Create each of the tabs
         input_tab = QWidget()
         output_tab = QWidget()
-        main_tab.addTab(input_tab, "Input")
+        main_tab.addTab(input_tab, "Specification")
         main_tab.addTab(output_tab, "Queries")
 
         # Define the splitter as the main widget
@@ -204,7 +204,7 @@ class VCLEditor(QMainWindow):
 
         # Create right area for resource boxes and output
         right_layout = QVBoxLayout()
-        right_label = QLabel("Additional Input")
+        right_label = QLabel("Input")
         right_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = right_label.font()
         font.setPointSize(14)
@@ -216,7 +216,7 @@ class VCLEditor(QMainWindow):
         right_layout.addWidget(self.input_view)
 
         # Property selection widget
-        properties_label = QLabel("Properties")
+        properties_label = QLabel("Properties and Variables")
         properties_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         font = properties_label.font()
         font.setPointSize(14)
