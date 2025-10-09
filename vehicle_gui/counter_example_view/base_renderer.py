@@ -17,6 +17,12 @@ class BaseRenderer(ABC):
         """Subclasses must provide a widget property."""
         pass
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Subclasses must provide a name property."""
+        pass
+
 
 class GSImageRenderer(BaseRenderer):
     def __init__(self):
@@ -34,6 +40,10 @@ class GSImageRenderer(BaseRenderer):
     @property
     def widget(self) -> QWidget:
         return self._widget
+    
+    @property
+    def name(self) -> str:
+        return "Grayscale Image Renderer"
 
 class TextRenderer(BaseRenderer):
     """Renderer for text data."""
@@ -49,3 +59,7 @@ class TextRenderer(BaseRenderer):
     @property
     def widget(self) -> QWidget:
         return self._widget
+    
+    @property
+    def name(self) -> str:
+        return "Text Renderer"

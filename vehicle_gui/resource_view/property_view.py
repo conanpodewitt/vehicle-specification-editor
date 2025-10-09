@@ -1,17 +1,27 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QListWidgetItem, QHBoxLayout, QPushButton, QLabel, QTreeWidget, QTreeWidgetItem, QComboBox, QLineEdit, QCheckBox, QFrame, QScrollArea
+from pathlib import Path
+
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QCheckBox, QFrame, QScrollArea
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QFileDialog
+
+from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
+from vehicle_gui.counter_example_view.base_renderer import TextRenderer, GSImageRenderer
+from vehicle_gui.vcl_bindings import CACHE_DIR
+
+RENDERERS_DIR = Path(CACHE_DIR) / "renderers"
 
 
 class VariableBox(QWidget):
     """Widget for variable renderer selection"""
     
-    renderer_changed = pyqtSignal(str, str)  # variable_name, renderer_path
+    renderer_changed = pyqtSignal(str, object)  # variable_name, renderer_class
     
     def __init__(self, variable_name, parent=None):
         super().__init__(parent)
         self.variable_name = variable_name
-        self.renderer_path = None
+        self.renderer_class = None
+        self.renderer_map = {}  # Maps dropdown text to renderer class
         
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -30,37 +40,83 @@ class VariableBox(QWidget):
         
         # Renderer selection dropdown
         self.renderer_combo = QComboBox()
-        self.renderer_combo.addItem("Default Renderers")
-        self.renderer_combo.addItem("Load Custom Renderer...")
+        self._populate_renderer_dropdown()
         self.renderer_combo.currentTextChanged.connect(self._on_renderer_changed)
         layout.addWidget(self.renderer_combo)
         
         layout.setSpacing(4)
         self.setLayout(layout)
     
-    def _on_renderer_changed(self, selection):
-        if selection == "Load Custom Renderer...":
-            self._load_custom_renderer()
-        elif selection == "Default Renderers":
-            self._set_default_renderer()
+    def _populate_renderer_dropdown(self):
+        """Populate the renderer dropdown with built-in and cached renderers."""
+        # Add built-in renderers
+        self.renderer_combo.addItem("GSImage Renderer")
+        self.renderer_map["GSImage Renderer"] = GSImageRenderer
+        
+        self.renderer_combo.addItem("Text Renderer")
+        self.renderer_map["Text Renderer"] = TextRenderer
+        
+        # Scan CACHE_DIR/renderers for additional renderers
+        for py_file in RENDERERS_DIR.glob("*.py"):
+            try:
+                renderer_classes = load_renderer_classes(str(py_file))
+                for renderer_class in renderer_classes:
+                    display_name = f"{renderer_class.__name__}"
+                    self.renderer_combo.addItem(display_name)
+                    self.renderer_map[display_name] = renderer_class
+            except Exception as e:
+                error_msg = f"Error loading renderers from {py_file}: {e}"
+                print(error_msg)
+                raise RuntimeError(error_msg)
+        
+        # Add custom loader option
+        self.renderer_combo.addItem("Load From Path...")
     
-    def _load_custom_renderer(self):
-        from PyQt6.QtWidgets import QFileDialog
+    def _on_renderer_changed(self, selection):
+        if selection == "Load From Path...":
+            self._load_from_path()
+        elif selection in self.renderer_map:
+            self._set_renderer_from_map(selection)
+    
+    def _set_renderer_from_map(self, selection):
+        """Set renderer from the pre-loaded renderer map."""
+        renderer_class = self.renderer_map[selection]
+        try:
+            self._set_renderer_class(renderer_class)
+        except Exception as e:
+            self._set_renderer_error(str(e))
+            print(f"Error setting renderer {selection}: {e}")
+    
+    def _load_from_path(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self, f"Load Renderer for {self.variable_name}", "", "Renderer modules (*.py);;All Files (*)"
         )
         if file_path:
-            self.renderer_path = file_path
-            self.display_box.setText(f"Custom: {file_path.split('/')[-1]}")
-            self.display_box.setToolTip(file_path)
-            self.renderer_combo.setCurrentText("Custom Renderer")
-            self.renderer_changed.emit(self.variable_name, file_path)
+            try:
+                renderer_classes = load_renderer_classes(file_path)
+                if renderer_classes:
+                    if len(renderer_classes) > 1:
+                        print(f"Warning: Multiple renderer classes found in {file_path}. Using the first one.")
+                    renderer = renderer_classes[0]
+                    self._set_renderer_class(renderer, f"Custom: {Path(file_path).name}", file_path, "Load Custom Renderer...")
+                else:
+                    self._set_renderer_error("No valid renderer class found in the selected file")
+            except Exception as e:
+                self._set_renderer_error(str(e))
+                print(f"Error loading renderer from {file_path}: {e}")
     
-    def _set_default_renderer(self):
-        self.renderer_path = None
-        self.display_box.setText("Default Renderers")
-        self.display_box.setToolTip("Using default GSImage and Text renderers")
-        self.renderer_changed.emit(self.variable_name, None)
+    def _set_renderer_class(self, renderer_class):
+        """Common method to set a renderer class and update UI."""
+        display_text = renderer_class.__name__
+        self.renderer_class = renderer_class
+        self.display_box.setText(display_text)
+        self.renderer_combo.setCurrentText(display_text)
+        self.renderer_changed.emit(self.variable_name, renderer_class)
+    
+    def _set_renderer_error(self, error_message):
+        """Common method to handle renderer loading errors."""
+        self.display_box.setText("Failed to load renderer")
+        self.display_box.setToolTip(error_message)
 
 
 class PropertyBox(QFrame):
@@ -134,11 +190,13 @@ class PropertyBox(QFrame):
 
 class PropertyView(QWidget):
     selection_changed = pyqtSignal(list)  # list of selected property ids
+    renderers_changed = pyqtSignal()  # emitted when any variable renderer changes
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._properties = []  # {"name": str, "type": str, "quantifiedVariablesInfo": list}
         self.property_widgets = {}
+        self._variable_renderers = {}
         
         # Create scrollable area for properties
         self.scroll_area = QScrollArea()
@@ -202,32 +260,22 @@ class PropertyView(QWidget):
         self._update_status()
         self._emit_selection()
     
-    def _on_variable_renderer_changed(self, variable_name, renderer_path):
+    def _on_variable_renderer_changed(self, variable_name, renderer_class):
         """Handle when a variable's renderer selection changes."""
-        # Store the renderer path for this variable
-        if not hasattr(self, '_variable_renderers'):
-            self._variable_renderers = {}
-        self._variable_renderers[variable_name] = renderer_path
+        self._variable_renderers[variable_name] = renderer_class
         
         # If synchronization is enabled, update all variables with the same name
         if self.sync_checkbox.isChecked():
-            self._sync_variable_renderer(variable_name, renderer_path)
+            self._sync_variable_renderer(variable_name, renderer_class)
+        
+        # Emit signal to notify that renderers have changed
+        self.renderers_changed.emit()
     
-    def _sync_variable_renderer(self, variable_name, renderer_path):
+    def _sync_variable_renderer(self, variable_name, renderer_class):
         """Update all variables with the same name to use the given renderer."""
         for prop_widget in self.property_widgets.values():
-            if hasattr(prop_widget, 'variable_widgets') and variable_name in prop_widget.variable_widgets:
-                var_widget = prop_widget.variable_widgets[variable_name]
-                # Update the widget's renderer without triggering the signal again
-                var_widget.renderer_path = renderer_path
-                if renderer_path:
-                    var_widget.display_box.setText(f"Custom: {renderer_path.split('/')[-1]}")
-                    var_widget.display_box.setToolTip(renderer_path)
-                    var_widget.renderer_combo.setCurrentText("Custom Renderer")
-                else:
-                    var_widget.display_box.setText("Default Renderers")
-                    var_widget.display_box.setToolTip("Using default GSImage and Text renderers")
-                    var_widget.renderer_combo.setCurrentText("Default Renderers")
+            var_widget = prop_widget.variable_widgets.get(variable_name)
+            var_widget._set_renderer_class(renderer_class)
 
     def selected_properties(self):
         """Return list of selected property names"""
@@ -259,7 +307,10 @@ class PropertyView(QWidget):
         return [(name, widget) for name, widget in self.property_widgets.items()]
     
     def get_variable_renderers(self):
-        """Return a dict of variable_name -> renderer_path for all variables."""
-        if not hasattr(self, '_variable_renderers'):
-            self._variable_renderers = {}
-        return self._variable_renderers.copy()
+        """Return a dict of property_name-variable_name -> renderer_class for all variables."""
+        renderers = {}
+        for prop_name, prop_widget in self.property_widgets.items():
+            for var_name, var_widget in prop_widget.variable_widgets.items():
+                key = f"{prop_name}-{var_name}"
+                renderers[key] = var_widget.renderer_class
+        return renderers

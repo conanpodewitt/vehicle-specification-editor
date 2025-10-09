@@ -21,7 +21,6 @@ from vehicle_gui.counter_example_view.counter_example_tab import CounterExampleT
 from vehicle_gui.resource_view.input_view import InputView
 from vehicle_gui.resource_view.property_view import PropertyView
 from vehicle_gui.vcl_bindings import CACHE_DIR
-from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
 from vehicle_gui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
 
 from vehicle_lang import VERSION 
@@ -225,6 +224,7 @@ class VCLEditor(QMainWindow):
         right_layout.addWidget(properties_label)
 
         self.property_view = PropertyView()
+        self.property_view.renderers_changed.connect(self.update_counter_example_modes)
         right_layout.addWidget(self.property_view)
         
         # Create output box
@@ -468,7 +468,8 @@ class VCLEditor(QMainWindow):
         
         self.query_tab.refresh_properties()
         if self.current_operation == "verify":
-            self.counter_example_tab.refresh_from_cache()
+            # Wait a moment to ensure all files are written
+            QTimer.singleShot(500, self.counter_example_tab.refresh_from_cache)
         self.current_operation = None
 
     def stop_current_operation(self):
@@ -630,29 +631,19 @@ class VCLEditor(QMainWindow):
 
     def update_counter_example_modes(self):
         """Update counter example modes based on variables from properties."""
-        base_renderers = [GSImageRenderer(), TextRenderer()]
-        modes = OrderedDict()
-        
-        # Get variables from properties instead of Variable resource boxes
+        modes = {}
         try:
-            properties = self.vcl_bindings.properties()
             variable_renderers = self.property_view.get_variable_renderers()
-            
-            for prop in properties:
-                variables = prop.get("quantifiedVariablesInfo", [])
-                for var_name in variables:
-                    if var_name not in modes:
-                        modes[var_name] = []
-                        # Check if there's a custom renderer loaded for this variable
-                        renderer_path = variable_renderers.get(var_name)
-                        if renderer_path:
-                            try:
-                                custom_renderers = load_renderer_classes(renderer_path)
-                                modes[var_name] += custom_renderers
-                            except Exception as e:
-                                print(f"Error loading renderers for {var_name}: {e}")
-                        modes[var_name] += base_renderers
+            for key, renderer_class in variable_renderers.items():
+                if renderer_class:
+                    try:
+                        # Instantiate the renderer class
+                        renderer_instance = renderer_class()
+                        modes[key] = renderer_instance
+                    except Exception as e:
+                        print(f"Error instantiating renderer {renderer_class.__name__} for {key}: {e}")
+                        self.append_to_problems(f"Failed to instantiate renderer for {key}: {e}")
         except Exception as e:
             print(f"Error updating counter example modes: {e}")
-        
+            self.append_to_problems(f"Error updating counter example modes: {e}")
         self.counter_example_tab.set_modes(modes)
