@@ -71,14 +71,14 @@ class OperationWorker(QRunnable):
                 self.signals.finished.emit(1)
 
     
-class VCLEditor(QMainWindow):
-    """Vehicle Specification Editor"""
+class VehicleGUI(QMainWindow):
+    """Vehicle GUI"""
     def __init__(self):
         super().__init__()
         self.stop_event = asyncio.Event()
         self.vcl_bindings = VCLBindings()
         self.vcl_path = None
-        self.setWindowTitle("Vehicle Specification Editor")
+        self.setWindowTitle("Vehicle GUI")
         self.setGeometry(100, 100, 1400, 800)
         self.current_operation = None # Tracks 'compile' or 'verify'
 
