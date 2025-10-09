@@ -159,7 +159,7 @@ class CounterExampleWidget(QWidget):
         self.next_button.show()
 
         key = self.ce_paths[self.ce_current_index]
-        content = self.data_map[key]
+        content = self.data_map.get(key, [])
         self.name_label.setText(f"{key}")
 
         # Render the data for the current variable if it has a renderer
