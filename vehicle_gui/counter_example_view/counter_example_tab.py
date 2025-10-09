@@ -54,8 +54,8 @@ class CounterExampleWidget(QWidget):
     def __init__(self, parent=None):
         """Initialize the counterexample widget. Modes is a dict of variable names to lists of renderers supported for that variable."""
         super().__init__(parent)
-        self.modes = OrderedDict()  # variable name -> list of renderers
         self.data_map = {}
+        self.var_index = {}
         self.ce_paths = []
         self.ce_current_index = 0
         self.parent_ref = parent
@@ -87,23 +87,19 @@ class CounterExampleWidget(QWidget):
         self.prev_button.clicked.connect(self._go_previous)
         self.next_button.clicked.connect(self._go_next)
 
-    def set_modes(self, modes: Dict[str, List[BaseRenderer]]):
+    def set_modes(self, modes: Dict[str, BaseRenderer]):
         """Set the rendering modes."""
-        self.modes = OrderedDict(modes)
-        self.var_index = {}
-        ind = 0
-        for var_name in self.modes:
-            self.var_index[var_name] = ind
-            ind += len(self.modes[var_name])
-
         # Rebuild stack
         while self.stack.count():
             widget = self.stack.takeAt(0).widget()
             if widget:
                 widget.setParent(None)
-        for mode_list in self.modes.values():
-            for renderer in mode_list:
-                self.stack.addWidget(renderer.widget)
+
+        self.var_index = {}    
+        ind = 0
+        for var_name, mode in modes.items():
+            self.stack.addWidget(mode.widget)
+            self.var_index[var_name] = ind
 
     def set_data(self, data: dict):
         """Set the counterexample data."""
@@ -111,7 +107,7 @@ class CounterExampleWidget(QWidget):
         self.ce_paths = list(data.keys())
         self.ce_current_index = 0
         if self.ce_paths:
-            self.var_name = self.ce_paths[0].split('-')[-1]
+            self.current_var_name = self.ce_paths[0].split('-')[-1]
         self.update_display()
 
     def update_display(self):
@@ -130,11 +126,8 @@ class CounterExampleWidget(QWidget):
         self.name_label.setText(f"{key}")
 
         # Render the data for all modes of the current variable
-        for renderer in self.modes.get(self.var_name, []):
-            try:
-                renderer.render(content)
-            except Exception as e:
-                print(f"Error rendering {self.var_name} with {renderer}: {e}")
+        renderer : BaseRenderer = self.stack[self.var_index[self.current_var_name]]
+        renderer.render(content)
 
     def _go_previous(self):
         """Navigate to previous counterexample."""
@@ -145,10 +138,7 @@ class CounterExampleWidget(QWidget):
 
         # Update variable name if quantified variable changed
         key = self.ce_paths[self.ce_current_index]
-        self.var_name = key.split('-')[-1]
-
-        modes = self._get_modes_for_var(self.var_name)
-        self.parent_ref.set_combo_box(modes)
+        self.current_var_name = key.split('-')[-1]
         self.update_display()
 
     def _go_next(self):
@@ -160,16 +150,8 @@ class CounterExampleWidget(QWidget):
         
         # Update variable name if quantified variable changed
         key = self.ce_paths[self.ce_current_index]
-        self.var_name = key.split('-')[-1]
-
-        modes = self._get_modes_for_var(self.var_name)
-        self.parent_ref.set_combo_box(modes)
+        self.current_var_name = key.split('-')[-1]
         self.update_display()
-
-    def _get_modes_for_var(self, var_name: str) -> List[str]:
-        """Get the list of rendering modes available for a given variable."""
-        renderers = self.modes.get(var_name, self.modes.get("default", []))
-        return [type(renderer).__name__ for renderer in renderers]
 
 
 class CounterExampleTab(QWidget):
@@ -189,67 +171,18 @@ class CounterExampleTab(QWidget):
             self.folder_label = QLabel("Cache directory not found")
         control_layout.addWidget(self.folder_label)
 
-        # Mode selector
-        self.mode_selector = QComboBox()
-        self.mode_selector.setFixedWidth(100)
-        self.mode_selector.currentTextChanged.connect(self._change_mode)
-        control_layout.addWidget(self.mode_selector)
-
-        # Folder selection button
-        self.folder_button = QPushButton()
-        self.folder_button.setIcon(QIcon.fromTheme("folder"))
-        self.folder_button.setFixedSize(32, 32)
-        self.folder_button.clicked.connect(self._select_folder)
-        control_layout.addWidget(self.folder_button)
-        self.layout.addLayout(control_layout)
-
         # Content widget
         self.content_widget = CounterExampleWidget(parent=self)
         self.content_widget.set_data(counter_examples_json)
         self.layout.addWidget(self.content_widget)
         self.setLayout(self.layout)
 
-    def set_modes(self, modes: Dict[str, List[BaseRenderer]]):
+    def set_modes(self, modes: Dict[str, BaseRenderer]):
         """Set the rendering modes for variables."""
-        self.modes = OrderedDict(modes)
         self.content_widget.set_modes(modes)
-        # Update combo for current var if data loaded
-        self._update_combo_for_current_data()
-
-    def set_combo_box(self, mode_names: List[str]):
-        """Set the combo box items for the current variable's modes."""
-        self.mode_selector.clear()
-        self.mode_selector.addItems(mode_names)
-        self.current_var_modes = mode_names
-
-    def _change_mode(self, new_mode):
-        """Change the rendering mode."""
-        mode_index = self.mode_selector.currentIndex()
-        stack_index = self.content_widget.var_index[self.var_name] + mode_index
-        self.content_widget.stack.setCurrentIndex(stack_index)
-
-    def _select_folder(self):
-        """Open folder selection dialog."""
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
-        if folder:
-            self.folder_label.setText(folder)
-            counter_examples_json = decode_counter_examples(folder)
-            self.content_widget.set_data(counter_examples_json)
-            # Set initial combo
-            self._update_combo_for_current_data()
 
     def refresh_from_cache(self):
         """Re-read counter examples from the cache directory."""
         if os.path.exists(CACHE_DIR):
             counter_examples_json = decode_counter_examples(CACHE_DIR)
             self.content_widget.set_data(counter_examples_json)
-            # Update combo for current data
-            self._update_combo_for_current_data()
-
-    def _update_combo_for_current_data(self):
-        """Update the combo box based on the current loaded data."""
-        if self.content_widget.ce_paths:
-            key = self.content_widget.ce_paths[0]
-            self.var_name = key.split('-')[-1]
-            mode_names = self.content_widget._get_modes_for_var(self.var_name)
-            self.set_combo_box(mode_names)
