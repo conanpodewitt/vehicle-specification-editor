@@ -27,15 +27,25 @@ def _vehicle_type(dtype: str) -> str:
 
 def decode_counter_examples(cache_dir: str = CACHE_DIR) -> dict:
     """Decode counterexamples from IDX files in assignment directories."""
-    subdirs = [
-        d for d in os.listdir(cache_dir)
-        if os.path.isdir(os.path.join(cache_dir, d)) and d.endswith("-assignments")
-    ]
+    try:
+        subdirs = [
+            d for d in os.listdir(cache_dir)
+            if os.path.isdir(os.path.join(cache_dir, d)) and d.endswith("-assignments")
+        ]
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        print(f"Error accessing cache directory {cache_dir}: {e}")
+        return {}
 
     counter_examples = {}
     for subdir in subdirs:
         subdir_path = os.path.join(cache_dir, subdir)
-        for filename in os.listdir(subdir_path):
+        try:
+            filenames = os.listdir(subdir_path)
+        except (PermissionError, OSError) as e:
+            print(f"Error accessing {subdir_path}: {e}")
+            continue
+            
+        for filename in filenames:
             full_path = os.path.join(subdir_path, filename)
             var_name = filename.strip('\"')
             key = f"{subdir}-{var_name}"
@@ -94,7 +104,7 @@ class CounterExampleWidget(QWidget):
         ind = 0
         for var_name in self.modes:
             self.var_index[var_name] = ind
-            ind += len(self.modes[var_name])
+            ind += len(self.modes.get(var_name, []))
 
         # Rebuild stack
         while self.stack.count():
@@ -126,7 +136,10 @@ class CounterExampleWidget(QWidget):
         self.next_button.show()
 
         key = self.ce_paths[self.ce_current_index]
-        content = self.data_map[key]
+        content = self.data_map.get(key)
+        if content is None:
+            self.name_label.setText(f"{key}: Data not found")
+            return
         self.name_label.setText(f"{key}")
 
         # Render the data for all modes of the current variable
@@ -225,7 +238,8 @@ class CounterExampleTab(QWidget):
     def _change_mode(self, new_mode):
         """Change the rendering mode."""
         mode_index = self.mode_selector.currentIndex()
-        stack_index = self.content_widget.var_index[self.var_name] + mode_index
+        var_index = self.content_widget.var_index.get(self.var_name, 0)
+        stack_index = var_index + mode_index
         self.content_widget.stack.setCurrentIndex(stack_index)
 
     def _select_folder(self):
