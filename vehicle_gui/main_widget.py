@@ -18,7 +18,7 @@ from vehicle_gui.code_editor import CodeEditor
 from vehicle_gui.vcl_bindings import VCLBindings
 from vehicle_gui.query_view.query_tab import QueryTab
 from vehicle_gui.counter_example_view.counter_example_tab import CounterExampleTab
-from vehicle_gui.resource_view.resource_box import ResourceBox
+from vehicle_gui.resource_view.input_view import InputView
 from vehicle_gui.resource_view.property_view import PropertyView
 from vehicle_gui.vcl_bindings import CACHE_DIR
 from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
@@ -76,7 +76,6 @@ class VCLEditor(QMainWindow):
     """Vehicle Specification Editor"""
     def __init__(self):
         super().__init__()
-        self.resource_boxes = []
         self.stop_event = asyncio.Event()
         self.vcl_bindings = VCLBindings()
         self.vcl_path = None
@@ -213,19 +212,9 @@ class VCLEditor(QMainWindow):
         right_label.setFont(font)
         right_layout.addWidget(right_label)
 
-        # Create scroll area for resource boxes
-        resource_scroll_area = QScrollArea()
-        resource_scroll_area.setWidgetResizable(True)
-        resource_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        resource_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        
-        # Create a widget to hold the resource boxes
-        resource_scroll_content = QWidget()
-        self.resource_layout = QVBoxLayout(resource_scroll_content)
-        self.resource_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        resource_scroll_content.setLayout(self.resource_layout)
-        resource_scroll_area.setWidget(resource_scroll_content)
-        right_layout.addWidget(resource_scroll_area)
+        # Create resource view widget
+        self.input_view = InputView(error_callback=self.append_to_problems)
+        right_layout.addWidget(self.input_view)
 
         # Property selection widget
         properties_label = QLabel("Properties")
@@ -243,9 +232,9 @@ class VCLEditor(QMainWindow):
         output_layout.addWidget(self.query_tab)
 
         # Set size policy for output box
-        resource_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.input_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.query_tab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        resource_scroll_area.setMinimumWidth(200)
+        self.input_view.setMinimumWidth(200)
         input_edit_layout.addLayout(right_layout, 2)
         input_layout.addLayout(input_edit_layout)
 
@@ -338,7 +327,7 @@ class VCLEditor(QMainWindow):
         self.status_bar.showMessage("New file created", 3000)
         self.vcl_path = None
         self.vcl_bindings.clear()
-        self.clear_resource_boxes()
+        self.input_view.clear_input_boxes()
 
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -354,12 +343,12 @@ class VCLEditor(QMainWindow):
 
             if not self.is_valid_vcl():
                 return
-            self.load_resources()               # Regenerate resource inputs and properties
+            self.input_view.load_inputs(self.vcl_bindings)               # Regenerate resource inputs and properties
 
         except Exception as e: 
             QMessageBox.critical(self, "Open File Error", f"Could not open file: {e}")
             self.file_path_label.setText("Error opening file")
-            self.clear_resource_boxes()         # Clear resources if file fails to load
+            self.input_view.clear_input_boxes()         # Clear resources if file fails to load
 
         # Load properties
         self.regenerate_properties()
@@ -386,14 +375,15 @@ class VCLEditor(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Save File Error", f"Could not save file: {e}")
             self.append_to_problems(f"Error saving file: {e}")
-            self.clear_resource_boxes()
+            self.input_view.clear_input_boxes()
             return False   
         
         if not self.is_valid_vcl():
-            self.clear_resource_boxes()
+            self.input_view.clear_input_boxes()
             return False
-        old_boxes = {box.name: box for box in self.resource_boxes}
-        self.regenerate_resource_boxes(old_boxes)
+        
+        # Preserve current resource state before regenerating
+        self.regenerate_input_boxes()
         self.update_counter_example_modes()
 
         # Remember selected properties
@@ -491,8 +481,8 @@ class VCLEditor(QMainWindow):
         if not self.save_before_operation():
             return
 
-        self.assign_resources()
-        loaded_resources = [box.name for box in self.resource_boxes if box.is_loaded and box.type != "Variable"]
+        self.input_view.assign_inputs(self.vcl_bindings)
+        loaded_resources = self.input_view.get_loaded_inputs()
         if not all(loaded_resources):
             QMessageBox.warning(self, "Resource Error", "Please load all required resources (networks, datasets, parameters) before compilation/verification")
             return
@@ -553,75 +543,12 @@ class VCLEditor(QMainWindow):
 
     # --- Resource Management ---
 
-    def clear_resource_boxes(self):
-        while self.resource_layout.count():
-            item = self.resource_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-        self.resource_boxes.clear()
-
-    def load_resources(self):
-        self.clear_resource_boxes()
-        if not self.vcl_path:
-            return
-        
-        # Generate resource boxes
-        try:
-            resources = self.vcl_bindings.resources()
-            # Variables are now displayed in the property selection widget, not as separate resource boxes
-            # variables = self.vcl_bindings.variables()
-
-            for entry in resources:  # Removed variables from here
-                name = entry.get("name")
-                type_ = entry.get("tag")
-                data_type = entry.get("typeText", None)
-                if not name or not type_:
-                    print(f"Skipping resource entry with missing name or type: {entry}")
-                    continue
-                box = ResourceBox(name, type_, data_type=data_type)
-                self.resource_layout.addWidget(box)
-                self.resource_boxes.append(box)
-                
-        except Exception as e:
-            tb_str = traceback.format_exc()
-            self.append_to_problems(f"Error generating resource boxes: {e}\n{tb_str}")
-            self.console_tab_widget.setCurrentWidget(self.problems_console)
-
-    def assign_resources(self):
-        """Assign resources from GUI boxes to the VCLBindings object."""
-        for box in self.resource_boxes:
-            if box.is_loaded: # is_loaded should correctly reflect if a value/path is set
-                try:
-                    if box.type == "Network":
-                        self.vcl_bindings.set_network(box.name, box.path)
-                    elif box.type == "Dataset":
-                        self.vcl_bindings.set_dataset(box.name, box.path)
-                    elif box.type == "Parameter":
-                        self.vcl_bindings.set_parameter(box.name, box.value)
-                except Exception as e:
-                    QMessageBox.warning(self, "Resource Assignment Error", f"Error assigning resource {box.name}: {e}")
-                    self.append_to_problems(f"Error assigning resource {box.name}: {e}")
-
     def show_version(self):
         QMessageBox.information(self, "Version", f"Current version: {VERSION}")
 
-    def regenerate_resource_boxes(self, old_boxes=None):
-        """Regenerate resource boxes, preserving any already-set values."""
-        if old_boxes is None:
-            old_boxes = {}
-        self.load_resources()
-        for box in self.resource_boxes:
-            old_box = old_boxes.get(box.name)
-            if old_box and old_box.is_loaded:
-                box.is_loaded = True
-                if box.type in ["Network", "Dataset"]:  # Removed "Variable"
-                    box.path = old_box.path
-                    box.input_box.setText(old_box.input_box.text())
-                elif box.type == "Parameter":
-                    box.value = old_box.value
-                    if old_box.value is not None:
-                        box.input_box.setText(str(old_box.value))
+    def regenerate_input_boxes(self):
+        """Regenerate input boxes, preserving any already-set values."""
+        self.input_view.load_inputs(self.vcl_bindings)
 
     def regenerate_properties(self, selected_properties=None):
         """Regenerate property selector, preserving any previously selected values."""
