@@ -8,9 +8,10 @@ from vehicle_lang import VehicleError
 from typing import Sequence, Optional, Callable
 from vehicle_gui.vcl_utils import get_resources_info
 from vehicle_gui.vcl_utils import get_properties_info
+from vehicle_gui import VEHICLE_DIR
 
+CACHE_DIR = os.path.join(VEHICLE_DIR, "cache")
 
-CACHE_DIR = os.path.join(os.path.expanduser("~"), ".vehicle")
 
 class Runner:
 	def __init__(self, command: str,  script: str = "_run_vcl.py", *args: str, **kwargs: str):

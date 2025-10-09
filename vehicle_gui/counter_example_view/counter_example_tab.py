@@ -219,11 +219,8 @@ class CounterExampleTab(QWidget):
         control_layout = QHBoxLayout()
 
         # Folder display
-        if os.path.exists(CACHE_DIR):
-            self.folder_label = QLabel(CACHE_DIR)
-            counter_examples_json = decode_counter_examples(CACHE_DIR)
-        else:
-            self.folder_label = QLabel("Cache directory not found")
+        self.folder_label = QLabel(CACHE_DIR)
+        counter_examples_json = decode_counter_examples(CACHE_DIR)
         control_layout.addWidget(self.folder_label)
 
         # Content widget

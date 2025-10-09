@@ -7,9 +7,9 @@ from PyQt6.QtWidgets import QFileDialog
 
 from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
 from vehicle_gui.counter_example_view.base_renderer import TextRenderer, GSImageRenderer
-from vehicle_gui.vcl_bindings import CACHE_DIR
+from vehicle_gui import VEHICLE_DIR
 
-RENDERERS_DIR = Path(CACHE_DIR) / "renderers"
+RENDERERS_DIR = Path(VEHICLE_DIR) / "renderers"
 
 
 class VariableBox(QWidget):
@@ -56,7 +56,7 @@ class VariableBox(QWidget):
         self.renderer_combo.addItem("Text Renderer")
         self.renderer_map["Text Renderer"] = TextRenderer
         
-        # Scan CACHE_DIR/renderers for additional renderers
+        # Scan VEHICLE_DIR/renderers for additional renderers
         for py_file in RENDERERS_DIR.glob("*.py"):
             try:
                 renderer_classes = load_renderer_classes(str(py_file))

@@ -1,13 +1,13 @@
 import sys
 import os
 from PyQt6.QtWidgets import QApplication
+from vehicle_gui import VEHICLE_DIR
 from vehicle_gui.main_widget import VCLEditor
-from vehicle_gui.vcl_bindings import CACHE_DIR
 import signal
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(VEHICLE_DIR, exist_ok=True)
 
 def main():
     app = QApplication(sys.argv)
