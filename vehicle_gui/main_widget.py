@@ -19,7 +19,7 @@ from vehicle_gui.vcl_bindings import VCLBindings
 from vehicle_gui.query_view.query_tab import QueryTab
 from vehicle_gui.counter_example_view.counter_example_tab import CounterExampleTab
 from vehicle_gui.resource_view.resource_box import ResourceBox
-from vehicle_gui.resource_view.property_selection_widget import PropertySelectionWidget
+from vehicle_gui.resource_view.property_view import PropertyView
 from vehicle_gui.vcl_bindings import CACHE_DIR
 from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
 from vehicle_gui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
@@ -235,8 +235,8 @@ class VCLEditor(QMainWindow):
         properties_label.setFont(font)
         right_layout.addWidget(properties_label)
 
-        self.property_selector = PropertySelectionWidget()
-        right_layout.addWidget(self.property_selector)
+        self.property_view = PropertyView()
+        right_layout.addWidget(self.property_view)
         
         # Create output box
         self.query_tab = QueryTab()
@@ -397,7 +397,7 @@ class VCLEditor(QMainWindow):
         self.update_counter_example_modes()
 
         # Remember selected properties
-        selected_properties = self.property_selector.selected_properties()
+        selected_properties = self.property_view.selected_properties()
         self.regenerate_properties(selected_properties)
         return True                            
 
@@ -498,7 +498,7 @@ class VCLEditor(QMainWindow):
             return
         
         if operation_name == "verify":
-            selected_properties = self.property_selector.selected_properties()
+            selected_properties = self.property_view.selected_properties()
             self.vcl_bindings.set_properties(selected_properties)
             if not selected_properties:
                 QMessageBox.warning(self, "No Properties Selected", "Please select at least one property to verify.")
@@ -569,9 +569,10 @@ class VCLEditor(QMainWindow):
         # Generate resource boxes
         try:
             resources = self.vcl_bindings.resources()
-            variables = self.vcl_bindings.variables()
+            # Variables are now displayed in the property selection widget, not as separate resource boxes
+            # variables = self.vcl_bindings.variables()
 
-            for entry in resources + variables:
+            for entry in resources:  # Removed variables from here
                 name = entry.get("name")
                 type_ = entry.get("tag")
                 data_type = entry.get("typeText", None)
@@ -614,7 +615,7 @@ class VCLEditor(QMainWindow):
             old_box = old_boxes.get(box.name)
             if old_box and old_box.is_loaded:
                 box.is_loaded = True
-                if box.type in ["Network", "Dataset", "Variable"]:
+                if box.type in ["Network", "Dataset"]:  # Removed "Variable"
                     box.path = old_box.path
                     box.input_box.setText(old_box.input_box.text())
                 elif box.type == "Parameter":
@@ -626,13 +627,13 @@ class VCLEditor(QMainWindow):
         """Regenerate property selector, preserving any previously selected values."""
         try:
             properties = self.vcl_bindings.properties()
-            self.property_selector.load_properties(properties)
+            self.property_view.load_properties(properties)
 
             if selected_properties is not None:
-                for prop_name, item in self.property_selector.property_items:
-                    # By default, all items are unchecked. Uncheck those not in selected_properties
+                for prop_name, prop_widget in self.property_view.property_items:
+                    # By default, all items are checked. Uncheck those not in selected_properties
                     if prop_name not in selected_properties:
-                        item.setCheckState(Qt.CheckState.Unchecked)
+                        prop_widget.set_checked(False)
         except Exception as e:
             tb_str = traceback.format_exc()
             self.append_to_problems(f"Error loading properties: {e}\n{tb_str}")
@@ -701,17 +702,30 @@ class VCLEditor(QMainWindow):
         self.console_tab_widget.setCurrentWidget(self.problems_console)
 
     def update_counter_example_modes(self):
-        """Update counter example modes based on loaded variable resources."""
+        """Update counter example modes based on variables from properties."""
         base_renderers = [GSImageRenderer(), TextRenderer()]
         modes = OrderedDict()
-        variable_boxes = [box for box in self.resource_boxes if box.type == 'Variable']
-        for box in variable_boxes:
-            modes[box.name] = []
-            if box.is_loaded:
-                try:
-                    custom_renderers = load_renderer_classes(box.path)
-                    modes[box.name] += custom_renderers
-                except Exception as e:
-                    print(f"Error loading renderers for {box.name}: {e}")
-            modes[box.name] += base_renderers
+        
+        # Get variables from properties instead of Variable resource boxes
+        try:
+            properties = self.vcl_bindings.properties()
+            variable_renderers = self.property_view.get_variable_renderers()
+            
+            for prop in properties:
+                variables = prop.get("quantifiedVariablesInfo", [])
+                for var_name in variables:
+                    if var_name not in modes:
+                        modes[var_name] = []
+                        # Check if there's a custom renderer loaded for this variable
+                        renderer_path = variable_renderers.get(var_name)
+                        if renderer_path:
+                            try:
+                                custom_renderers = load_renderer_classes(renderer_path)
+                                modes[var_name] += custom_renderers
+                            except Exception as e:
+                                print(f"Error loading renderers for {var_name}: {e}")
+                        modes[var_name] += base_renderers
+        except Exception as e:
+            print(f"Error updating counter example modes: {e}")
+        
         self.counter_example_tab.set_modes(modes)
