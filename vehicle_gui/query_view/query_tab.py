@@ -1,8 +1,8 @@
 import os
 import json
 
-from PyQt6.QtWidgets import QTabWidget, QTextEdit, QTabBar, QSizePolicy, QWidget, QVBoxLayout, QComboBox, QLabel, QHBoxLayout
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QTabWidget, QTextEdit, QTabBar, QSizePolicy, QWidget, QVBoxLayout, QComboBox, QLabel, QHBoxLayout, QSplitter
+from PyQt6.QtCore import pyqtSignal, Qt
 from pathlib import Path
 
 from vehicle_gui.query_view.verification.blocks import Status, PropertyQuantifier
@@ -124,28 +124,51 @@ class QueryTab(QTabWidget):
         self._load_current_property()
     
     def _create_workflow_widget(self):
-        """Create workflow widget with property dropdown"""
+        """Create workflow widget with property dropdown + split editor pane."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        
+
         # Property selection header
         header = QHBoxLayout()
         header.addWidget(QLabel("Property:"))
-        
+
         self.property_dropdown = QComboBox()
         self.property_dropdown.setMinimumWidth(150)
         self.property_dropdown.currentTextChanged.connect(self._on_property_changed)
         header.addWidget(self.property_dropdown)
         header.addStretch()
-        
-        # Add to main layout
+
         layout.addLayout(header)
-        layout.addWidget(self.graphics_view)
+
+        # --- NEW: Splitter with left workflow view and right editor tabs ---
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter.setChildrenCollapsible(False)
+
+        # Left side: the existing graphics view (tree/workflow)
+        left = QWidget()
+        left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addWidget(self.graphics_view)
+        left.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+
+        # Right side: editor tabs for opened query files
+        self._editor_tabs = QTabWidget()
+        self._editor_tabs.setTabsClosable(True)
+        self._editor_tabs.tabCloseRequested.connect(self._close_editor_tab)
+        self._editor_tabs.hide()  # hidden until first query opens
+        self._editor_tabs.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+
+        self._splitter.addWidget(left)
+        self._splitter.addWidget(self._editor_tabs)
+
+        self._splitter.setSizes([800, 0])
+
+        layout.addWidget(self._splitter)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
-        
+
         return widget
-    
+        
     def _populate_property_dropdown(self):
         """Populate dropdown with available properties"""
         properties = []
@@ -182,11 +205,18 @@ class QueryTab(QTabWidget):
     
     def add_text_tab(self, title: str, text: str) -> int:
         """Add a new text tab"""
+        for i in range(self._editor_tabs.count()):
+            if self._editor_tabs.tabText(i) == title:
+                self._editor_tabs.setCurrentIndex(i)
+                self._ensure_editor_visible()
+                return i
+
         editor = QTextEdit()
         editor.setReadOnly(True)
         editor.setPlainText(text)
-        idx = self.addTab(editor, title)
-        self._refresh_close_buttons()
+        idx = self._editor_tabs.addTab(editor, title)
+        self._editor_tabs.setCurrentIndex(idx)
+        self._ensure_editor_visible()
         return idx
     
     def clear(self):
@@ -208,12 +238,13 @@ class QueryTab(QTabWidget):
         self._load_current_property()
     
     def _clear_text_tabs(self):
-        """Remove all text tabs except workflow tab"""
-        for i in range(self.count() - 1, -1, -1):   # Start from bottom
-            widget = self.widget(i)
-            if widget is not self._workflow_widget:
-                self.removeTab(i)
-                widget.deleteLater()
+        """Remove all right-pane editor tabs."""
+        for i in range(self._editor_tabs.count() - 1, -1, -1):
+            w = self._editor_tabs.widget(i)
+            self._editor_tabs.removeTab(i)
+            if w:
+                w.deleteLater()
+        self._collapse_editor_if_needed()
     
     def _close_tab(self, index: int):
         """Close tab if not the workflow tab"""
@@ -233,3 +264,25 @@ class QueryTab(QTabWidget):
             if btn:
                 btn.setVisible(is_closable)
                 btn.setEnabled(is_closable)
+
+    def _ensure_editor_visible(self):
+        """Show the right editor pane and give it space."""
+        if self._editor_tabs.isHidden():
+            self._editor_tabs.show()
+        self._splitter.setSizes([400, 400])
+
+    def _collapse_editor_if_needed(self):
+        """Hide the right editor pane when no tabs remain."""
+        if self._editor_tabs.count() == 0:
+            self._editor_tabs.hide()
+            # Collapse everything to the left again
+            self._splitter.setSizes([800, 0])
+
+    def _close_editor_tab(self, index: int):
+        """Close a right-pane editor tab and collapse if none remain."""
+        if 0 <= index < self._editor_tabs.count():
+            w = self._editor_tabs.widget(index)
+            self._editor_tabs.removeTab(index)
+            if w:
+                w.deleteLater()
+            self._collapse_editor_if_needed()
