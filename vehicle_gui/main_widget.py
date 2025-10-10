@@ -12,6 +12,8 @@ from superqt.utils import CodeSyntaxHighlight
 import functools
 from typing import Callable
 from pathlib import Path
+import json
+import math
 
 from vehicle_gui.code_editor import CodeEditor
 from vehicle_gui.vcl_bindings import VCLBindings
@@ -81,7 +83,15 @@ class VehicleGUI(QMainWindow):
         self.verifier_paths = {}  # Store mapping of verifier display names to paths
         self.setWindowTitle("Vehicle GUI")
         self.setGeometry(100, 100, 1400, 800)
-        self.current_operation = None # Tracks 'compile' or 'verify'
+        self.current_operation = None  # Tracks 'compile' or 'verify'
+        # Buffer for incoming JSON chunks and per-property progress tracking
+        self._json_buffer = ""
+        self.current_property_name = ""
+        self.property_total_queries = 0
+        self.property_completed_queries = 0
+        # Pause duration before starting next property (ms)
+        self.property_pause_ms = 300
+        self._waiting_transition = False
 
         self.thread_pool = QThreadPool()
         self.operation_signals = OperationSignals()
@@ -274,9 +284,10 @@ class VehicleGUI(QMainWindow):
         self.status_bar.addWidget(spacer_status)
 
         # Progress bar
-        progress_bar = QProgressBar()
-        progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status_bar.addPermanentWidget(progress_bar)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.progress_bar.setVisible(False)
+        self.status_bar.addPermanentWidget(self.progress_bar)
 
         # Separator before version and verifier
         sep_group2 = QFrame()
@@ -473,6 +484,9 @@ class VehicleGUI(QMainWindow):
             current_widget = self.problems_console
         elif tag == "stdout":
             current_widget = self.log_console
+        # If verifying, parse JSON chunk for progress
+        if self.current_operation == 'verify' and tag == 'stdout':
+            self._process_json_chunk(chunk)
         current_widget.insertPlainText(chunk)
         current_widget.ensureCursorVisible()
         self.console_tab_widget.setCurrentWidget(current_widget)
@@ -484,6 +498,7 @@ class VehicleGUI(QMainWindow):
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
         """Handles the completion of a VCL operation from the worker thread."""
+        self.progress_bar.setVisible(False)  # Hide progress bar when operation completes
         self.compile_button.setEnabled(True)
         self.verify_button.setEnabled(True)
         self.stop_button.setVisible(False)
@@ -529,26 +544,41 @@ class VehicleGUI(QMainWindow):
             if not selected_properties:
                 QMessageBox.warning(self, "No Properties Selected", "Please select at least one property to verify.")
                 return
+            # Reset progress tracking
+            self._json_buffer = ""
+            self.verify_total_queries = 0
+            self.verify_completed_queries = 0
+            self.progress_bar.setValue(0)
+            self.progress_bar.setMaximum(0)
 
         self.status_bar.showMessage(f"Performing {operation_name.capitalize()}... Please wait.", 0)
         self.compile_button.setEnabled(False)
         self.verify_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.current_operation = operation_name
+        # Show and reset progress bar for operation
+        self.progress_bar.reset()
+        self.progress_bar.setVisible(True)
 
         self.stop_event.clear() # Clear any previous stop signal
         self.problems_console.clear()
-        self.log_console.clear()
-        self.query_tab.clear() # Clear previous queries
 
+        # Set up the operation callback and reset progress for verify
         if operation_name == "compile":
             operation = functools.partial(self.vcl_bindings.compile, stop_event=self.stop_event)
         elif operation_name == "verify":
+            # Reset per-property progress tracking
+            self._json_buffer = ""
+            self.current_property_name = ""
+            self.property_total_queries = 0
+            self.property_completed_queries = 0
+            self.progress_bar.reset()
             operation = functools.partial(self.vcl_bindings.verify, stop_event=self.stop_event)
-
-        # Create and start the worker
+        else:
+            return
+        # Create and start worker
         worker = OperationWorker(
-            operation = operation,
+            operation=operation,
             vcl_bindings=self.vcl_bindings,
             stop_event=self.stop_event,
             signals=self.operation_signals
@@ -682,3 +712,85 @@ class VehicleGUI(QMainWindow):
             print(f"Error updating counter example modes: {e}")
             self.append_to_problems(f"Error updating counter example modes: {e}")
         self.counter_example_tab.set_modes(modes)
+
+    def _process_json_chunk(self, chunk: str):
+        """Accumulate and parse complete JSON objects from chunked output."""
+        # Append new data to buffer
+        self._json_buffer += chunk
+        """
+        Accumulate and parse complete JSON objects from chunked output using brace matching.
+        """
+        buf = self._json_buffer
+        pos = 0
+        length = len(buf)
+        # Find JSON objects by matching braces
+        start = buf.find('{', pos)
+        while start != -1 and pos < length:
+            brace_count = 0
+            end = start
+            for i in range(start, length):
+                if buf[i] == '{':
+                    brace_count += 1
+                elif buf[i] == '}':
+                    brace_count -= 1
+                if brace_count == 0:
+                    end = i
+                    candidate = buf[start:end+1]
+                    try:
+                        obj = json.loads(candidate)
+                        self._handle_json_event(obj)
+                    except ValueError:
+                        # Incomplete or invalid JSON
+                        pass
+                    pos = end + 1
+                    break
+            else:
+                # No complete JSON object found
+                break
+            start = buf.find('{', pos)
+        # Retain unprocessed part of buffer
+        self._json_buffer = buf[pos:]
+
+    def _init_property(self, prop: str, total: int):
+        """Initialize progress bar for a new property."""
+        self.current_property_name = prop
+        self.property_total_queries = total
+        self.property_completed_queries = 0
+        self.progress_bar.setMaximum(total)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat(f"{prop}: %v/%m (%p%)")
+
+    def _end_property_transition(self):
+        """End transition pause and allow next property start."""
+        self._waiting_transition = False
+
+    def _handle_json_event(self, event: dict):
+        """Update progress bar based on JSON verification events."""
+        tag = event.get('tag')
+        # Handle per-property progress
+        if tag == 'PropertyStart':
+            contents = event.get('contents', {})
+            prop = contents.get('propertyName', '')
+            total = contents.get('numberOfQueries', 0)
+            # Schedule or perform initialization based on transition state
+            def init_prop():
+                self._init_property(prop, total)
+            if self._waiting_transition:
+                QTimer.singleShot(self.property_pause_ms, init_prop)
+            else:
+                init_prop()
+        elif tag == 'QueryStart':
+            # Optionally show halfway progress before query completes
+            if self.property_total_queries > 0:
+                half_value = math.ceil(self.property_completed_queries + 0.5)
+                self.progress_bar.setValue(half_value)
+        elif tag == 'QueryFinish':
+            # Increment completed queries
+            self.property_completed_queries += 1
+            self.progress_bar.setValue(self.property_completed_queries)
+        elif tag == 'PropertyFinish':
+            # Ensure progress is complete for this property
+            self.progress_bar.setValue(self.property_total_queries)
+            # Enter transition pause before next property
+            self._waiting_transition = True
+            QTimer.singleShot(self.property_pause_ms, self._end_property_transition)
