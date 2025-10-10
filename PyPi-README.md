@@ -28,6 +28,11 @@ vehicle_gui
 4. Compile or verify specification
 5. View results in console and results tabs
 
+# Change Log
+- Auto-discover Marabou installations
+- View unique quantified variables for each property
+- Add side-by-side view of query tree and query text
+
 ## License
 
 MIT License

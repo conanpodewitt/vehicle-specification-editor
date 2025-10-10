@@ -27,7 +27,7 @@ from vehicle_gui.util import which_all
 
 from vehicle_lang import VERSION 
 
-RELEASE_VERSION = "0.1.3"
+RELEASE_VERSION = "0.3.1"
 
 class OperationSignals(QObject):
     """

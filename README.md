@@ -26,8 +26,14 @@ vehicle_gui
 1. Open a Vehicle specification file (.vcl)
 2. Load required resources (auto-detected)
 3. Set verifier path if needed
-4. Compile or verify specification
-5. View results in console and results tabs
+4. Set a counterexample renderer for one or more variables
+5. Compile specification and view generated query tree
+6. Verify specification and view rendered counterexamples
+
+# Change Log
+- Auto-discover Marabou installations
+- View unique quantified variables for each property
+- Add side-by-side view of query tree and query text
 
 ## License
 
