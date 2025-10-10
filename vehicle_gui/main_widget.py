@@ -434,7 +434,6 @@ class VehicleGUI(QMainWindow):
         self.verifier_dropdown.setCurrentText(file_path)
         self._set_verifier_path(file_path)
 
-
     def _populate_verifier_dropdown(self):
         """Populate the verifier dropdown with detected verifiers."""
         self.verifier_dropdown.clear()
@@ -445,9 +444,6 @@ class VehicleGUI(QMainWindow):
         for path in paths:
             self.verifier_dropdown.addItem(path)
             self.verifier_paths.add(path)
-
-        # Add option to load from path
-        self.verifier_dropdown.addItem("Load from Path...")
         
         # If verifiers found, set the first one as default
         if self.verifier_paths:
@@ -455,9 +451,12 @@ class VehicleGUI(QMainWindow):
             self.verifier_dropdown.setCurrentText(first_verifier_path)
             self._set_verifier_path(first_verifier_path)
         else:
+            self.verifier_dropdown.addItem("No Verifier Set")
             self.verifier_dropdown.setCurrentText("No Verifier Set")
             self.verify_button.setEnabled(False)
 
+        # Add option to load from path
+        self.verifier_dropdown.addItem("Load from Path...")
 
     def _on_verifier_selected(self, text: str):
         """Handle verifier selection from dropdown."""
