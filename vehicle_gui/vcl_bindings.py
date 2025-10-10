@@ -40,6 +40,9 @@ class Runner:
 				cmd.append(flag)
 				cmd.append(str(value))
 				
+		# Always include JSON output for verify commands
+		if command == "verify":
+			cmd.append("--json")
 		return cmd
 
 	async def run(self, line_reader: Callable, finish_fn: Callable, stop_event: asyncio.Event) -> str:
