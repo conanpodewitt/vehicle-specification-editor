@@ -5,14 +5,13 @@ import asyncio
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, QWidget,
                              QLabel, QFileDialog, QHBoxLayout, QStatusBar, QMessageBox,
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
-                             QTabWidget, QProgressBar, QApplication)
+                             QTabWidget, QProgressBar, QApplication, QComboBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, QTimer
 from PyQt6.QtGui import QFontDatabase, QIcon
 from superqt.utils import CodeSyntaxHighlight
 import functools
-import glob
-from typing import Callable, OrderedDict
-import shutil
+from typing import Callable
+from pathlib import Path
 
 from vehicle_gui.code_editor import CodeEditor
 from vehicle_gui.vcl_bindings import VCLBindings
@@ -22,6 +21,7 @@ from vehicle_gui.resource_view.input_view import InputView
 from vehicle_gui.resource_view.property_view import PropertyView
 from vehicle_gui.vcl_bindings import CACHE_DIR
 from vehicle_gui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
+from vehicle_gui.util import which_all
 
 from vehicle_lang import VERSION 
 
@@ -78,6 +78,7 @@ class VehicleGUI(QMainWindow):
         self.stop_event = asyncio.Event()
         self.vcl_bindings = VCLBindings()
         self.vcl_path = None
+        self.verifier_paths = {}  # Store mapping of verifier display names to paths
         self.setWindowTitle("Vehicle GUI")
         self.setGeometry(100, 100, 1400, 800)
         self.current_operation = None # Tracks 'compile' or 'verify'
@@ -88,7 +89,7 @@ class VehicleGUI(QMainWindow):
         self.operation_signals.finished.connect(self._gui_operation_finished)
 
         self.show_ui()
-        self.set_verifier_from_PATH() # Attempt to set verifier from PATH on startup
+        # Verifier dropdown will automatically populate and set default verifier
 
     def show_ui(self):
         """Initialize UI"""
@@ -106,11 +107,7 @@ class VehicleGUI(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         file_toolbar.addWidget(spacer)
 
-        # Add set verifier, compile, and verify buttons
-        verifier_btn = QPushButton(QIcon.fromTheme("computer"), "Set Verifier")
-        verifier_btn.clicked.connect(self.set_verifier_from_button)
-        file_toolbar.addWidget(verifier_btn)
-
+        # Add compile, and verify buttons
         self.compile_button = QPushButton(QIcon.fromTheme("scanner"), "Compile")
         self.compile_button.clicked.connect(self.compile_spec)
         file_toolbar.addWidget(self.compile_button)
@@ -308,13 +305,17 @@ class VehicleGUI(QMainWindow):
         sep_verifier.setFrameShadow(QFrame.Shadow.Sunken)
         self.status_bar.addPermanentWidget(sep_verifier)
 
-        # Verifier label
-        self.verifier_label = QLabel("No Verifier Set")
-        self.verifier_label.setContentsMargins(0, 0, 10, 0)
-        self.verifier_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.verifier_label.mouseReleaseEvent = lambda event: self.set_verifier_from_button()
-        self.status_bar.addPermanentWidget(self.verifier_label)
+        # Verifier dropdown
+        self.verifier_dropdown = QComboBox()
+        self.verifier_dropdown.setMinimumWidth(150)
+        self.verifier_dropdown.setMaximumWidth(200)
+        self.verifier_dropdown.currentTextChanged.connect(self._on_verifier_selected)
+        self.status_bar.addPermanentWidget(self.verifier_dropdown)
+        self.verifier_paths = set() 
 
+        # Populate verifier dropdown
+        self._populate_verifier_dropdown()
+        
         # Connect cursor movements to update the position indicator
         self.editor.cursorPositionChanged.connect(self.update_cursor_position)
 
@@ -407,27 +408,60 @@ class VehicleGUI(QMainWindow):
     
     # --- Verifier Management ---
 
-    def set_verifier_from_button(self):
+    def load_verifier_from_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Select Marabou Verifier", "", "Marabou Verifier (Marabou*);;All Files (*)"
         )
         if not file_path:
             return
-        self.vcl_bindings.verifier_path = file_path
-        self.verify_button.setEnabled(True)
-        self.verifier_label.setText(f"Verifier: {os.path.basename(file_path)}")
-        self.status_bar.showMessage(f"Verifier set: {file_path}", 3000)
+        
+        if file_path not in self.verifier_paths:
+            insert_index = self.verifier_dropdown.count() - 1
+            self.verifier_dropdown.insertItem(insert_index, file_path)
+        
+        self.verifier_paths.add(file_path)
+        self.verifier_dropdown.setCurrentText(file_path)
+        self._set_verifier_path(file_path)
 
-    def set_verifier_from_PATH(self):
-        """Attempt to find Marabou in system PATH and set it as the verifier."""
-        marabou_exec = shutil.which("Marabou")
-        if marabou_exec:
-            self.vcl_bindings.verifier_path = marabou_exec
-            self.verifier_label.setText(f"Verifier: {os.path.basename(marabou_exec)}")
-            self.append_to_log(f"Marabou found: {marabou_exec}")
-            self.verify_button.setEnabled(True)
+
+    def _populate_verifier_dropdown(self):
+        """Populate the verifier dropdown with detected verifiers."""
+        self.verifier_dropdown.clear()
+        verifier_name = "Marabou"
+
+        paths = which_all(verifier_name)
+        
+        for path in paths:
+            self.verifier_dropdown.addItem(path)
+
+        # Add option to load from path
+        self.verifier_dropdown.addItem("Load from Path...")
+        
+        # If verifiers found, set the first one as default
+        if self.verifier_paths:
+            first_verifier_path = self.verifier_paths.pop()
+            self.verifier_dropdown.setCurrentText(first_verifier_path)
+            self._set_verifier_path(first_verifier_path)
         else:
-            self.append_to_log("Marabou not found in PATH.")
+            self.verifier_dropdown.setCurrentText("No Verifier Set")
+            self.verify_button.setEnabled(False)
+
+
+    def _on_verifier_selected(self, text: str):
+        """Handle verifier selection from dropdown."""
+        if text == "No Verifier Set":
+            self.verify_button.setEnabled(False)
+        elif text == "Load from Path...":
+            self.load_verifier_from_file()
+        elif text in self.verifier_paths:
+            self._set_verifier_path(text)
+        else:
+            self.verifier_dropdown.setCurrentText("No Verifier Set")
+
+    def _set_verifier_path(self, path: str):
+        """Set the verifier path and update UI."""
+        self.vcl_bindings.verifier_path = path
+        self.verify_button.setEnabled(True)
 
     # --- Compilation and Verification ---
 
