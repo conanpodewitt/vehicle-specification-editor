@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication
 from vehicle_gui import VEHICLE_DIR
-from vehicle_gui.main_widget import VCLEditor
+from vehicle_gui.main_widget import VehicleGUI
 import signal
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -15,7 +15,7 @@ def main():
     app.setStyle("Fusion")
     
     try:
-        editor = VCLEditor()
+        editor = VehicleGUI()
         editor.show()
         exit_code = app.exec()
         

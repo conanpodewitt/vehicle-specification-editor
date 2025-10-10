@@ -197,6 +197,7 @@ class PropertyView(QWidget):
         self._properties = []  # {"name": str, "type": str, "quantifiedVariablesInfo": list}
         self.property_widgets = {}
         self._variable_renderers = {}
+        self._is_syncing = False  # Flag to prevent recursive synchronization
         
         # Create scrollable area for properties
         self.scroll_area = QScrollArea()
@@ -264,18 +265,25 @@ class PropertyView(QWidget):
         """Handle when a variable's renderer selection changes."""
         self._variable_renderers[variable_name] = renderer_class
         
-        # If synchronization is enabled, update all variables with the same name
-        if self.sync_checkbox.isChecked():
+        # If synchronization is enabled and we're not already syncing, update all variables with the same name
+        if self.sync_checkbox.isChecked() and not self._is_syncing:
             self._sync_variable_renderer(variable_name, renderer_class)
         
-        # Emit signal to notify that renderers have changed
-        self.renderers_changed.emit()
+        # Prevent recursive signal calls
+        if not self._is_syncing:
+            self.renderers_changed.emit()
     
     def _sync_variable_renderer(self, variable_name, renderer_class):
         """Update all variables with the same name to use the given renderer."""
-        for prop_widget in self.property_widgets.values():
-            var_widget = prop_widget.variable_widgets.get(variable_name)
-            var_widget._set_renderer_class(renderer_class)
+        self._is_syncing = True  # Set flag to prevent recursive calls
+        try:
+            for prop_widget in self.property_widgets.values():
+                var_widget = prop_widget.variable_widgets.get(variable_name)
+                var_widget._set_renderer_class(renderer_class)
+        except Exception as e:
+            print(f"Error during variable renderer synchronization: {e}")
+        finally:
+            self._is_syncing = False
 
     def selected_properties(self):
         """Return list of selected property names"""
