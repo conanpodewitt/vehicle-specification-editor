@@ -433,6 +433,7 @@ class VehicleGUI(QMainWindow):
         
         for path in paths:
             self.verifier_dropdown.addItem(path)
+            self.verifier_paths.add(path)
 
         # Add option to load from path
         self.verifier_dropdown.addItem("Load from Path...")
