@@ -91,6 +91,10 @@ class VehicleGUI(QMainWindow):
         self.property_completed_queries = 0
         # Pause duration before starting next property (ms)
         self.property_pause_ms = 300
+         
+        # Track if error dialog has been displayed
+        self._error_shown = False
+
         self._waiting_transition = False
 
         self.thread_pool = QThreadPool()
@@ -180,14 +184,8 @@ class VehicleGUI(QMainWindow):
         console_font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         console_font.setPointSize(12)
 
-        # Create the Problems tab in the console
-        self.problems_console = QTextEdit()
-        self.problems_console.setFont(console_font)
-        self.problems_console.setReadOnly(True)
-        self.console_tab_widget.addTab(self.problems_console, "Problems")
-
         # Create the Output tab in the console
-        self.log_console = QTextEdit() # For "Output" tab
+        self.log_console = QTextEdit()  # For "Output" tab
         self.log_console.setFont(console_font)
         self.log_console.setReadOnly(True)
         self.console_tab_widget.addTab(self.log_console, "Output")
@@ -219,7 +217,7 @@ class VehicleGUI(QMainWindow):
         right_layout.addWidget(right_label)
 
         # Create resource view widget
-        self.input_view = InputView(error_callback=self.append_to_problems)
+        self.input_view = InputView(error_callback=self._show_error)
         right_layout.addWidget(self.input_view)
 
         # Property selection widget
@@ -481,19 +479,16 @@ class VehicleGUI(QMainWindow):
     def _gui_process_output_chunk(self, tag: str, chunk: str):
         """Processes output chunks received from the worker thread."""
         if tag == "stderr":
-            current_widget = self.problems_console
-        elif tag == "stdout":
-            current_widget = self.log_console
-        # If verifying, parse JSON chunk for progress
+            # Show errors in dialog and stop further processing
+            self._show_error(chunk)
+            return
+
         if self.current_operation == 'verify' and tag == 'stdout':
             self._process_json_chunk(chunk)
-        current_widget.insertPlainText(chunk)
-        current_widget.ensureCursorVisible()
-        self.console_tab_widget.setCurrentWidget(current_widget)
-
-        # Refresh properties in query tab after any output
-        if self.current_operation == "verify":
-            self.counter_example_tab.refresh_from_cache()
+        # Append stdout to log console
+        self.log_console.insertPlainText(chunk)
+        self.log_console.ensureCursorVisible()
+        self.console_tab_widget.setCurrentWidget(self.log_console)
 
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
@@ -510,11 +505,14 @@ class VehicleGUI(QMainWindow):
         elif return_code == -1: # Stopped by user
             self.status_bar.showMessage(f"{self.current_operation.capitalize()} stopped by user.", 5000)
             self.append_to_log(f"\n--- {self.current_operation.capitalize()} stopped by user. ---")
-            if self.console_tab_widget: self.console_tab_widget.setCurrentWidget(self.problems_console)
         else: # Error
-            self.status_bar.showMessage(f"Error during {self.current_operation.capitalize()}. Check Problems tab.", 5000)
-            self.append_to_problems(f"\n--- {self.current_operation.capitalize()} failed. ---")
-            if self.console_tab_widget: self.console_tab_widget.setCurrentWidget(self.problems_console)
+            # Show error dialog
+            self.status_bar.showMessage(f"Error during {self.current_operation.capitalize()}.", 5000)
+            QMessageBox.critical(
+                self,
+                f"{self.current_operation.capitalize()} Error",
+                "An error occurred during verification."
+            )
         
         self.query_tab.refresh_properties()
         if self.current_operation == "verify":
@@ -523,12 +521,18 @@ class VehicleGUI(QMainWindow):
         self.current_operation = None
 
     def stop_current_operation(self):
+        # Only stop if an operation is active
+        if not self.current_operation:
+            return
         self.status_bar.showMessage(f"Attempting to stop {self.current_operation}...", 0)
-        self.stop_event.set() 
-        self.stop_button.setEnabled(False) 
+        self.stop_event.set()
+        self.stop_button.setEnabled(False)
     
     def _start_vcl_operation(self, operation_name: str):
         """Common logic to start a VCL compile or verify operation."""
+        # Reset error state for new operation
+        self._error_shown = False
+
         if not self.save_before_operation():
             return
 
@@ -561,7 +565,7 @@ class VehicleGUI(QMainWindow):
         self.progress_bar.setVisible(True)
 
         self.stop_event.clear() # Clear any previous stop signal
-        self.problems_console.clear()
+        # No problems_console to clear
 
         # Set up the operation callback and reset progress for verify
         if operation_name == "compile":
@@ -597,14 +601,22 @@ class VehicleGUI(QMainWindow):
         self._start_vcl_operation("compile")
 
     def verify_spec(self):
-        self.compile_spec() # Always compile before verifying
-
+        # Always compile before verifying
+        self.compile_spec()
+        # If compile didn't start (e.g., missing resources), abort verify
+        if self.current_operation != "compile":
+            return
+        # Wait for compilation to finish
         while self.current_operation == "compile":
-            QApplication.processEvents() # Wait for compilation to finish
+            QApplication.processEvents()
 
+        # Abort verify if compile error occurred
+        if self._error_shown:
+            return
         if not self.vcl_bindings.verifier_path:
             QMessageBox.warning(self, "Verification Error", "Please set the verifier path first.")
             return
+        # Start verification
         self._start_vcl_operation("verify")
 
     # --- Resource Management ---
@@ -629,20 +641,24 @@ class VehicleGUI(QMainWindow):
                         prop_widget.set_checked(False)
         except Exception as e:
             tb_str = traceback.format_exc()
-            self.append_to_problems(f"Error loading properties: {e}\n{tb_str}")
-            self.console_tab_widget.setCurrentWidget(self.problems_console)
+            QMessageBox.critical(self, "Error", f"Error loading properties: {e}\n{tb_str}")
 
     # --- Type Checking ---
 
     def is_valid_vcl(self):
-        self.problems_console.clear()
+        # Clear previous editor errors
         self.editor.clear_errors()
         errors = self.vcl_bindings.type_check()
         if errors:
+            # Show type check errors in a dialog
+            msgs = []
             for error in errors:
-                self.append_to_problems(f"Problem: {error['problem']}")
-                self.append_to_problems(f"Fix: {error['fix']}")
-                self.append_to_problems(f"Provenance: {error['provenance']['contents']}")
+                msgs.append(f"Problem: {error['problem']}")
+                msgs.append(f"Fix: {error['fix']}")
+                prov = error.get('provenance', {}).get('contents')
+                if prov:
+                    msgs.append(f"Provenance: {prov}")
+            QMessageBox.critical(self, "Type Check Errors", "\n".join(msgs))
             self.editor.add_errors(errors)
             return False
         return True
@@ -689,10 +705,15 @@ class VehicleGUI(QMainWindow):
         self.log_console.ensureCursorVisible()
         self.console_tab_widget.setCurrentWidget(self.log_console)
     
-    def append_to_problems(self, message: str):
-        self.problems_console.append(message)
-        self.problems_console.ensureCursorVisible()
-        self.console_tab_widget.setCurrentWidget(self.problems_console)
+    def _show_error(self, message: str):
+        """Display an error message in a pop-up dialog."""
+        # Only show the first error
+        if self._error_shown:
+            return
+        self._error_shown = True
+        QMessageBox.critical(self, "Error", message)
+        # Stop any ongoing operation
+        self.stop_current_operation()
 
     def update_counter_example_modes(self):
         """Update counter example modes based on variables from properties."""
