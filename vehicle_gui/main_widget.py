@@ -212,6 +212,7 @@ class VehicleGUI(QMainWindow):
         right_layout = QVBoxLayout()
         right_label = QLabel("Input")
         right_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        right_label.setIndent(10)
         font = right_label.font()
         font.setPointSize(14)
         right_label.setFont(font)
@@ -224,6 +225,7 @@ class VehicleGUI(QMainWindow):
         # Property selection widget
         properties_label = QLabel("Properties and Variables")
         properties_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        properties_label.setIndent(10)
         font = properties_label.font()
         font.setPointSize(14)
         properties_label.setFont(font)
