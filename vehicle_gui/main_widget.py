@@ -508,8 +508,40 @@ class VehicleGUI(QMainWindow):
         self.stop_button.setEnabled(False)
 
         if return_code == 0: # Success
-            self.status_bar.showMessage(f"{self.current_operation.capitalize()} completed successfully.", 5000)
+            msg = f"{self.current_operation.capitalize()} completed successfully."
+            self.status_bar.showMessage(msg, 5000)
             self.append_to_log(f"\n--- {self.current_operation.capitalize()} finished successfully. ---")
+            # If verify, list any failed properties and their queries
+            if self.current_operation == 'verify':
+                try:
+                    from vehicle_gui.counter_example_view.counter_example_tab import decode_counter_examples
+                    failures = decode_counter_examples()
+                    if failures:
+                        # Group failures by property name
+                        groups = {}
+                        for key, tensor in failures.items():
+                            # key format: '<property>-assignments-<var>'
+                            prop = key.split('-assignments-')[0]
+                            groups.setdefault(prop, []).append((key, tensor))
+                        # Log each property's result
+                        for prop, items in groups.items():
+                            # Property header
+                            self.append_to_log(f"  {prop}", color='red')
+                            # Result line
+                            self.append_to_log(f"    Verifier found a counterexample", color='red')
+                            # Show sample vector for each counterexample variable
+                            for _, tensor in items:
+                                try:
+                                    flat = tensor.flatten()
+                                    sample = flat[:5].tolist()
+                                    self.append_to_log(f"      x: {sample}", color='red')
+                                except Exception:
+                                    self.append_to_log(f"      x: {tensor}", color='red')
+                    else:
+                        # All passed
+                        self.append_to_log("All properties hold - Verifier found no counterexamples", color='green')
+                except Exception:
+                    pass
         elif return_code == -1: # Stopped by user
             self.status_bar.showMessage(f"{self.current_operation.capitalize()} stopped by user.", 5000)
             self.append_to_log(f"\n--- {self.current_operation.capitalize()} stopped by user. ---")
