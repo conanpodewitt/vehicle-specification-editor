@@ -479,7 +479,7 @@ class VehicleGUI(QMainWindow):
     def _gui_process_output_chunk(self, tag: str, chunk: str):
         """Processes output chunks received from the worker thread."""
         if tag == "stderr":
-            # Show errors in dialog and stop further processing
+            # Handle stderr by showing error dialog (logging inside _show_error)
             self._show_error(chunk)
             return
 
@@ -494,6 +494,11 @@ class VehicleGUI(QMainWindow):
     def _gui_operation_finished(self, return_code: int):
         """Handles the completion of a VCL operation from the worker thread."""
         self.progress_bar.setVisible(False)  # Hide progress bar when operation completes
+        # If an error dialog was shown during this operation, suppress success/failure logs and clear status
+        if self._error_shown:
+            self.status_bar.clearMessage()
+            self.current_operation = None
+            return
         self.compile_button.setEnabled(True)
         self.verify_button.setEnabled(True)
         self.stop_button.setVisible(False)
@@ -511,8 +516,11 @@ class VehicleGUI(QMainWindow):
             QMessageBox.critical(
                 self,
                 f"{self.current_operation.capitalize()} Error",
-                "An error occurred during verification."
+                "An error occurred during the operation."
             )
+            # Log failure in output console
+            self.append_to_log(f"\n--- {self.current_operation.capitalize()} failed. ---")
+            self.console_tab_widget.setCurrentWidget(self.log_console)
         
         self.query_tab.refresh_properties()
         if self.current_operation == "verify":
@@ -710,10 +718,26 @@ class VehicleGUI(QMainWindow):
         # Only show the first error
         if self._error_shown:
             return
+        # Clear any status message (e.g., 'Attempting to stop...')
+        self.status_bar.clearMessage()
         self._error_shown = True
-        QMessageBox.critical(self, "Error", message)
+        # Log raw stderr message to output console
+        self.append_to_log(message)
+        # Switch to console view to display the log
+        self.console_tab_widget.setCurrentWidget(self.log_console)
         # Stop any ongoing operation
         self.stop_current_operation()
+        # Restore UI controls
+        self.compile_button.setEnabled(True)
+        self.verify_button.setEnabled(True)
+        self.stop_button.setVisible(False)
+        self.stop_button.setEnabled(False)
+        # Hide progress bar
+        self.progress_bar.setVisible(False)
+        # Clear current operation state
+        self.current_operation = None
+        # Show error dialog (modal)
+        QMessageBox.critical(self, "Error", message)
 
     def update_counter_example_modes(self):
         """Update counter example modes based on variables from properties."""
