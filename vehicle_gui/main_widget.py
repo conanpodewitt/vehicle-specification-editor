@@ -14,6 +14,7 @@ from typing import Callable
 from pathlib import Path
 import json
 import math
+from datetime import datetime
 
 from vehicle_gui.code_editor import CodeEditor
 from vehicle_gui.vcl_bindings import VCLBindings
@@ -484,11 +485,11 @@ class VehicleGUI(QMainWindow):
             return
 
         if self.current_operation == 'verify' and tag == 'stdout':
+            # Parse JSON chunks for verify operations
             self._process_json_chunk(chunk)
-        # Append stdout to log console
-        self.log_console.insertPlainText(chunk)
-        self.log_console.ensureCursorVisible()
-        self.console_tab_widget.setCurrentWidget(self.log_console)
+            return
+        # Normal stdout: timestamped output
+        self.append_to_log(chunk)
 
     @pyqtSlot(int)
     def _gui_operation_finished(self, return_code: int):
@@ -708,8 +709,19 @@ class VehicleGUI(QMainWindow):
         if QApplication.instance():
             QApplication.instance().quit()
 
-    def append_to_log(self, message: str):
-        self.log_console.append(message)
+    def append_to_log(self, message: str, color: str = None):
+        """Append a timestamped message to the log console, optionally colored."""
+        # Format timestamp
+        try:
+            ts = datetime.now().strftime('%H:%M:%S')
+            line = f"[{ts}] {message}"
+        except Exception:
+            line = message
+        # Wrap in color if specified
+        if color:
+            line = f'<span style="color:{color}">{line}</span>'
+        # Append rich text
+        self.log_console.append(line)
         self.log_console.ensureCursorVisible()
         self.console_tab_widget.setCurrentWidget(self.log_console)
     
@@ -809,14 +821,40 @@ class VehicleGUI(QMainWindow):
         """End transition pause and allow next property start."""
         self._waiting_transition = False
 
-    def _handle_json_event(self, event: dict):
+    def _handle_json_event(self, event):
         """Update progress bar based on JSON verification events."""
+        # Some JSON chunks may be lists of events
+        if isinstance(event, list):
+            for ev in event:
+                self._handle_json_event(ev)
+            return
         tag = event.get('tag')
+        # Human-readable logging for JSON events
+        if tag == 'VerificationStart':
+            self.append_to_log('Verification started', color='blue')
+        elif tag == 'VerificationFinish':
+            self.append_to_log('Verification finished successfully', color='blue')
+        elif tag == 'MultiPropertyStart':
+            contents = event.get('contents')
+            if not isinstance(contents, dict):
+                contents = {}
+            pname = contents.get('propertyName', '')
+            self.append_to_log(f"Batch start for '{pname}'", color='blue')
+        elif tag == 'MultiPropertyFinish':
+            contents = event.get('contents')
+            if not isinstance(contents, dict):
+                contents = {}
+            pname = contents.get('propertyName', '')
+            self.append_to_log(f"Batch finish for '{pname}'", color='blue')
         # Handle per-property progress
         if tag == 'PropertyStart':
-            contents = event.get('contents', {})
+            contents = event.get('contents')
+            if not isinstance(contents, dict):
+                contents = {}
             prop = contents.get('propertyName', '')
             total = contents.get('numberOfQueries', 0)
+            # Log property start
+            self.append_to_log(f"Property '{prop}' started ({total} queries)", color='green')
             # Schedule or perform initialization based on transition state
             def init_prop():
                 self._init_property(prop, total)
@@ -825,17 +863,28 @@ class VehicleGUI(QMainWindow):
             else:
                 init_prop()
         elif tag == 'QueryStart':
-            # Optionally show halfway progress before query completes
+            contents = event.get('contents')
+            if not isinstance(contents, dict):
+                contents = {}
+            qid = contents.get('queryID', '')
+            self.append_to_log(f"Query {qid} started", color='black')
+            # Show halfway progress if available
             if self.property_total_queries > 0:
                 half_value = math.ceil(self.property_completed_queries + 0.5)
                 self.progress_bar.setValue(half_value)
         elif tag == 'QueryFinish':
+            contents = event.get('contents')
+            if not isinstance(contents, dict):
+                contents = {}
+            qid = contents.get('queryID', '')
             # Increment completed queries
             self.property_completed_queries += 1
             self.progress_bar.setValue(self.property_completed_queries)
+            self.append_to_log(f"Query {qid} finished", color='black')
         elif tag == 'PropertyFinish':
             # Ensure progress is complete for this property
             self.progress_bar.setValue(self.property_total_queries)
+            self.append_to_log(f"Property '{self.current_property_name}' finished", color='green')
             # Enter transition pause before next property
             self._waiting_transition = True
             QTimer.singleShot(self.property_pause_ms, self._end_property_transition)
