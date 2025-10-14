@@ -546,16 +546,8 @@ class VehicleGUI(QMainWindow):
             self.status_bar.showMessage(f"{self.current_operation.capitalize()} stopped by user.", 5000)
             self.append_to_log(f"\n--- {self.current_operation.capitalize()} stopped by user. ---")
         else: # Error
-            # Show error dialog
-            self.status_bar.showMessage(f"Error during {self.current_operation.capitalize()}.", 5000)
-            QMessageBox.critical(
-                self,
-                f"{self.current_operation.capitalize()} Error",
-                "An error occurred during the operation."
-            )
-            # Log failure in output console
-            self.append_to_log(f"\n--- {self.current_operation.capitalize()} failed. ---")
-            self.console_tab_widget.setCurrentWidget(self.log_console)
+            # Handle error using common error handler
+            self._show_error(f"\n--- {self.current_operation.capitalize()} failed. ---")
         
         self.query_tab.refresh_properties()
         if self.current_operation == "verify":
@@ -607,8 +599,7 @@ class VehicleGUI(QMainWindow):
         self.progress_bar.reset()
         self.progress_bar.setVisible(True)
 
-        self.stop_event.clear() # Clear any previous stop signal
-        # No problems_console to clear
+        self.stop_event.clear()  # Clear any previous stop signal
 
         # Set up the operation callback and reset progress for verify
         if operation_name == "compile":
@@ -647,7 +638,7 @@ class VehicleGUI(QMainWindow):
         # Always compile before verifying
         self.compile_spec()
         # If compile didn't start (e.g., missing resources), abort verify
-        if self.current_operation != "compile":
+        if self.current_operation is None:
             return
         # Wait for compilation to finish
         while self.current_operation == "compile":
@@ -659,7 +650,6 @@ class VehicleGUI(QMainWindow):
         if not self.vcl_bindings.verifier_path:
             QMessageBox.warning(self, "Verification Error", "Please set the verifier path first.")
             return
-        # Start verification
         self._start_vcl_operation("verify")
 
     # --- Resource Management ---
@@ -684,7 +674,8 @@ class VehicleGUI(QMainWindow):
                         prop_widget.set_checked(False)
         except Exception as e:
             tb_str = traceback.format_exc()
-            QMessageBox.critical(self, "Error", f"Error loading properties: {e}\n{tb_str}")
+            # Use common error handler to log and display errors
+            self._show_error(f"Error loading properties: {e}\n{tb_str}")
 
     # --- Type Checking ---
 
@@ -701,7 +692,8 @@ class VehicleGUI(QMainWindow):
                 prov = error.get('provenance', {}).get('contents')
                 if prov:
                     msgs.append(f"Provenance: {prov}")
-            QMessageBox.critical(self, "Type Check Errors", "\n".join(msgs))
+            # Display type check errors in console using common error handler
+            self._show_error(f"Type Check Errors\n" + "\n".join(msgs))
             self.editor.add_errors(errors)
             return False
         return True
@@ -761,29 +753,27 @@ class VehicleGUI(QMainWindow):
     
     def _show_error(self, message: str):
         """Display an error message in a pop-up dialog."""
-        # Only show the first error
-        if self._error_shown:
+        # Determine if this is the first error
+        first_error = not self._error_shown
+        # Always log the error to the console in red
+        self.append_to_log(message, color='red')
+        self.console_tab_widget.setCurrentWidget(self.log_console)
+        if not first_error:
+            # Subsequent errors are logged only
             return
-        # Clear any status message (e.g., 'Attempting to stop...')
+        # First error: clear status and halt operation
         self.status_bar.clearMessage()
         self._error_shown = True
-        # Log raw stderr message to output console
-        self.append_to_log(message)
-        # Switch to console view to display the log
-        self.console_tab_widget.setCurrentWidget(self.log_console)
-        # Stop any ongoing operation
         self.stop_current_operation()
         # Restore UI controls
         self.compile_button.setEnabled(True)
         self.verify_button.setEnabled(True)
         self.stop_button.setVisible(False)
         self.stop_button.setEnabled(False)
-        # Hide progress bar
+        # Hide progress bar and clear operation state
         self.progress_bar.setVisible(False)
-        # Clear current operation state
         self.current_operation = None
-        # Show error dialog (modal)
-        QMessageBox.critical(self, "Error", message)
+        # Modal dialogs suppressed; errors are highlighted in console
 
     def update_counter_example_modes(self):
         """Update counter example modes based on variables from properties."""
