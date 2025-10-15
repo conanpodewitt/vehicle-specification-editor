@@ -26,6 +26,8 @@ from vehicle_gui.vcl_bindings import CACHE_DIR
 from vehicle_gui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
 from vehicle_gui.util import which_all
 
+from vehicle_gui.counter_example_view.counter_example_tab import decode_counter_examples
+
 from vehicle_lang import VERSION 
 
 RELEASE_VERSION = "0.1.3"
@@ -520,7 +522,6 @@ class VehicleGUI(QMainWindow):
             # If verify, list any failed properties and their queries
             if self.current_operation == 'verify':
                 try:
-                    from vehicle_gui.counter_example_view.counter_example_tab import decode_counter_examples
                     failures = decode_counter_examples()
                     if failures:
                         # Group failures by property name
@@ -637,13 +638,10 @@ class VehicleGUI(QMainWindow):
                     os.remove(os.path.join(root, name))
                 except Exception as e:
                     self.append_to_problems(f"Error clearing cache file {name}: {e}")
-        self.query_tab.refresh_properties()
         self._start_vcl_operation("compile")
 
     def verify_spec(self):
-        # Always compile before verifying
-        self.compile_spec()
-        # If compile didn't start (e.g., missing resources), abort verify
+        self.compile_spec()  # Always compile before verify
         if self.current_operation is None:
             return
         # Wait for compilation to finish

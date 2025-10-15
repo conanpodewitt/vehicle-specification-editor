@@ -140,7 +140,6 @@ class QueryTab(QTabWidget):
 
         layout.addLayout(header)
 
-        # --- NEW: Splitter with left workflow view and right editor tabs ---
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._splitter.setChildrenCollapsible(False)
 
@@ -155,7 +154,7 @@ class QueryTab(QTabWidget):
         self._editor_tabs = QTabWidget()
         self._editor_tabs.setTabsClosable(True)
         self._editor_tabs.tabCloseRequested.connect(self._close_editor_tab)
-        self._editor_tabs.hide()  # hidden until first query opens
+        self._editor_tabs.hide() 
         self._editor_tabs.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         self._splitter.addWidget(left)
@@ -228,13 +227,7 @@ class QueryTab(QTabWidget):
         """Refresh available properties list"""
         current = self.property_dropdown.currentText()
         self._populate_property_dropdown()
-        
-        # Restore selection if possible
-        index = self.property_dropdown.findText(current)
-        if index != -1:
-            self.property_dropdown.setCurrentIndex(index)
-        else:
-            self.property_dropdown.setCurrentIndex(0)
+        self.property_dropdown.setCurrentIndex(0)
         self._load_current_property()
     
     def _clear_text_tabs(self):
