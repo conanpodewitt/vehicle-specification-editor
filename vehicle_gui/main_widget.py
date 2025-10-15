@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit, QVBoxLayout, QPushButton, Q
                              QScrollArea, QSizePolicy, QToolBar, QFrame, QSplitter,
                              QTabWidget, QProgressBar, QApplication, QComboBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QObject, pyqtSignal, QThreadPool, QTimer
-from PyQt6.QtGui import QFontDatabase, QIcon
+from PyQt6.QtGui import QFontDatabase, QIcon, QTextCursor
 from superqt.utils import CodeSyntaxHighlight
 import functools
 from typing import Callable
@@ -752,6 +752,7 @@ class VehicleGUI(QMainWindow):
             line = f'<span style="color:{color}">{line}</span>'
         # Append rich text
         self.log_console.append(line)
+        self.log_console.moveCursor(QTextCursor.MoveOperation.End)
         self.log_console.ensureCursorVisible()
         self.console_tab_widget.setCurrentWidget(self.log_console)
     
