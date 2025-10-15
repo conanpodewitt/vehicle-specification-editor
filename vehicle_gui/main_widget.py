@@ -482,8 +482,14 @@ class VehicleGUI(QMainWindow):
     def _gui_process_output_chunk(self, tag: str, chunk: str):
         """Processes output chunks received from the worker thread."""
         if tag == "stderr":
-            # Handle stderr by showing error dialog (logging inside _show_error)
-            self._show_error(chunk)
+            # Distinguish warnings vs errors on stderr
+            text = chunk.strip()
+            if text.lower().startswith("warning") or "warning" in text.lower():
+                # Log warnings in yellow without interrupting flow
+                self.append_to_log(chunk, color='yellow')
+            else:
+                # Handle errors via common error handler
+                self._show_error(chunk)
             return
 
         if self.current_operation == 'verify' and tag == 'stdout':
