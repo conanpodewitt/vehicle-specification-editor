@@ -135,6 +135,11 @@ class VariableBox(QWidget):
         
         # Add custom loader option
         self.renderer_combo.addItem("Load From Path...")
+
+        if self.renderer_combo.count() > 0:
+            first_item = self.renderer_combo.itemText(0)
+            self.renderer_combo.setCurrentText(first_item)
+            self._on_renderer_changed(first_item)
     
     def _on_renderer_changed(self, selection):
         if selection == "Load From Path...":
