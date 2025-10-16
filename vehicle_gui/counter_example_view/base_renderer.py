@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QTextEdit
 from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtCore import Qt
 from typing import Optional, Dict
 import numpy as np
 
@@ -25,6 +26,9 @@ class BaseRenderer(ABC):
 
 
 class GSImageRenderer(BaseRenderer):
+    # Constant for maximum display height
+    MAX_DISPLAY_HEIGHT = 300
+    
     def __init__(self):
         self._widget = QLabel()
 
@@ -35,7 +39,18 @@ class GSImageRenderer(BaseRenderer):
 
     def render(self, data: np.ndarray):
         pixmap = self._prepare_pixmap(data)
-        self.widget.setPixmap(pixmap)
+        
+        # Calculate scale factor based on max display height
+        original_height = pixmap.height()
+        scale_factor = self.MAX_DISPLAY_HEIGHT / original_height
+        scale_factor = max(1.0, scale_factor)  
+        scaled_pixmap = pixmap.scaled(
+            int(pixmap.width() * scale_factor), 
+            int(pixmap.height() * scale_factor),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        self.widget.setPixmap(scaled_pixmap)
 
     @property
     def widget(self) -> QWidget:
