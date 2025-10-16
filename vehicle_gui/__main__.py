@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QApplication
 from vehicle_gui.main_widget import VehicleGUI
 from vehicle_gui import VEHICLE_DIR
 from vehicle_gui.vcl_bindings import CACHE_DIR
-from vehicle_gui.resource_view.property_view import RENDERERS_DIR
+from vehicle_gui.counter_example_view.counter_example_tab import RENDERERS_DIR
 import signal
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)

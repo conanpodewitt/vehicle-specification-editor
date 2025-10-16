@@ -23,7 +23,6 @@ from vehicle_gui.counter_example_view.counter_example_tab import CounterExampleT
 from vehicle_gui.resource_view.input_view import InputView
 from vehicle_gui.resource_view.property_view import PropertyView
 from vehicle_gui.vcl_bindings import CACHE_DIR
-from vehicle_gui.counter_example_view.base_renderer import GSImageRenderer, TextRenderer
 from vehicle_gui.util import which_all
 
 from vehicle_gui.counter_example_view.counter_example_tab import decode_counter_examples
@@ -106,7 +105,6 @@ class VehicleGUI(QMainWindow):
         self.operation_signals.finished.connect(self._gui_operation_finished)
 
         self.show_ui()
-        # Verifier dropdown will automatically populate and set default verifier
 
     def show_ui(self):
         """Initialize UI"""
@@ -234,7 +232,6 @@ class VehicleGUI(QMainWindow):
         right_layout.addWidget(properties_label)
 
         self.property_view = PropertyView()
-        self.property_view.renderers_changed.connect(self.update_counter_example_modes)
         right_layout.addWidget(self.property_view)
         
         # Create output box
@@ -367,7 +364,6 @@ class VehicleGUI(QMainWindow):
 
         # Load properties
         self.regenerate_properties()
-        self.update_counter_example_modes()
     
     def save_file(self):
         current_file_path = self.vcl_path
@@ -399,7 +395,6 @@ class VehicleGUI(QMainWindow):
         
         # Preserve current resource state before regenerating
         self.regenerate_input_boxes()
-        self.update_counter_example_modes()
 
         # Remember selected properties
         selected_properties = self.property_view.selected_properties()
@@ -779,25 +774,6 @@ class VehicleGUI(QMainWindow):
         self.progress_bar.setVisible(False)
         self.current_operation = None
         # Modal dialogs suppressed; errors are highlighted in console
-
-    def update_counter_example_modes(self):
-        """Update counter example modes based on variables from properties."""
-        modes = {}
-        try:
-            variable_renderers = self.property_view.get_variable_renderers()
-            for key, renderer_class in variable_renderers.items():
-                if renderer_class:
-                    try:
-                        # Instantiate the renderer class
-                        renderer_instance = renderer_class()
-                        modes[key] = renderer_instance
-                    except Exception as e:
-                        print(f"Error instantiating renderer {renderer_class.__name__} for {key}: {e}")
-                        self.append_to_problems(f"Failed to instantiate renderer for {key}: {e}")
-        except Exception as e:
-            print(f"Error updating counter example modes: {e}")
-            self.append_to_problems(f"Error updating counter example modes: {e}")
-        self.counter_example_tab.set_modes(modes)
 
     def _process_json_chunk(self, chunk: str):
         """Accumulate and parse complete JSON objects from chunked output."""
