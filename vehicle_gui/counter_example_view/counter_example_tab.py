@@ -8,10 +8,24 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from typing import List, Type, Dict
-from collections import OrderedDict
+from collections import defaultdict
 
 from vehicle_gui.vcl_bindings import CACHE_DIR
 from vehicle_gui.counter_example_view.base_renderer import *
+
+
+from pathlib import Path
+
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QCheckBox, QFrame, QScrollArea
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QFileDialog
+
+from vehicle_gui.counter_example_view.extract_renderers import load_renderer_classes
+from vehicle_gui.counter_example_view.base_renderer import TextRenderer, GSImageRenderer
+from vehicle_gui import VEHICLE_DIR
+
+RENDERERS_DIR = Path(VEHICLE_DIR) / "renderers"
 
 
 def _wait_until_stable_size(path: str, checks: int = 3, interval: float = 0.05) -> bool:
@@ -52,7 +66,7 @@ def decode_counter_examples(cache_dir: str = CACHE_DIR) -> dict:
                 continue
 
             var_name = filename.strip('\"')
-            key = f"{subdir}-{var_name}"
+            key = f"{subdir}-{var_name}" # e.g. prop1-assignments-varA
             try:
                 tensors = idx2numpy.convert_from_file(full_path)
                 counter_examples[key] = tensors
@@ -60,6 +74,267 @@ def decode_counter_examples(cache_dir: str = CACHE_DIR) -> dict:
                 print(f"Error decoding {full_path}: {e}")
 
     return counter_examples
+
+
+class VariableBox(QWidget):
+    """Widget for variable renderer selection"""
+    renderer_changed = pyqtSignal(str, object)  # variable_name, renderer_obj
+    
+    def __init__(self, var_name, parent=None):
+        super().__init__(parent)
+        self.variable_name = var_name
+        self.renderer = None
+        self.renderer_map = {}  # Maps dropdown text to renderer class
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(2)
+        
+        # Variable name label
+        name_label = QLabel(f"{var_name}")
+        name_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(name_label)
+        
+        # Display box (read-only line edit like resource boxes)
+        self.display_box = QLineEdit()
+        self.display_box.setPlaceholderText("No renderer loaded")
+        self.display_box.setReadOnly(True)
+        layout.addWidget(self.display_box)
+        
+        # Renderer selection dropdown
+        self.renderer_combo = QComboBox()
+        self.renderer_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._populate_renderer_dropdown()
+        self.renderer_combo.currentTextChanged.connect(self._on_renderer_changed)
+        layout.addWidget(self.renderer_combo)
+        
+        self.setLayout(layout)
+    
+    def _populate_renderer_dropdown(self):
+        """Populate the renderer dropdown with built-in and cached renderers."""
+        # Add built-in renderers
+        self.renderer_combo.addItem("GSImage Renderer")
+        self.renderer_map["GSImage Renderer"] = GSImageRenderer()
+        
+        self.renderer_combo.addItem("Text Renderer")
+        self.renderer_map["Text Renderer"] = TextRenderer()
+        
+        # Scan VEHICLE_DIR/renderers for additional renderers
+        for py_file in RENDERERS_DIR.glob("*.py"):
+            try:
+                renderer_classes = load_renderer_classes(str(py_file))
+                for renderer_class in renderer_classes:
+                    renderer = renderer_class()
+                    display_name = renderer.name
+                    self.renderer_combo.addItem(display_name)
+                    self.renderer_map[display_name] = renderer
+            except Exception as e:
+                error_msg = f"Error loading renderers from {py_file}: {e}"
+                print(error_msg)
+                raise RuntimeError(error_msg)
+        
+        # Add custom loader option
+        self.renderer_combo.addItem("Load From Path...")
+    
+    def _on_renderer_changed(self, selection):
+        if selection == "Load From Path...":
+            self._load_from_path()
+        elif selection in self.renderer_map:
+            self._set_renderer_from_map(selection)
+    
+    def _set_renderer_from_map(self, selection):
+        """Set renderer from the pre-loaded renderer map."""
+        renderer = self.renderer_map[selection]
+        try:
+            self._set_renderer(renderer)
+        except Exception as e:
+            self._set_renderer_error(str(e))
+            print(f"Error setting renderer {selection}: {e}")
+    
+    def _load_from_path(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, f"Load Renderer for {self.variable_name}", "", "Renderer modules (*.py);;All Files (*)"
+        )
+        if file_path:
+            try:
+                renderer_classes = load_renderer_classes(file_path)
+                if renderer_classes:
+                    if len(renderer_classes) > 1:
+                        print(f"Warning: Multiple renderer classes found in {file_path}. Using the first one.")
+                    renderer = renderer_classes[0]
+                    self._set_renderer(renderer, f"Custom: {Path(file_path).name}", file_path, "Load Custom Renderer...")
+                else:
+                    self._set_renderer_error("No valid renderer class found in the selected file")
+            except Exception as e:
+                self._set_renderer_error(str(e))
+                print(f"Error loading renderer from {file_path}: {e}")
+    
+    def _set_renderer(self, renderer):
+        """Common method to set a renderer class and update UI."""
+        self.renderer = renderer
+        self.display_box.setText(renderer.name)
+        self.renderer_combo.setCurrentText(renderer.__class__.__name__)
+        self.renderer_changed.emit(self.variable_name, renderer)
+    
+    def _set_renderer_error(self, error_message):
+        """Common method to handle renderer loading errors."""
+        self.display_box.setText("Failed to load renderer")
+        self.display_box.setToolTip(error_message)
+
+
+class PropertyBox(QFrame):
+    """Widget representing a single property with its variables."""
+    
+    def __init__(self, prop_name, renderer_loader=None, parent=None):
+        super().__init__(parent)
+        self.renderer_loader = renderer_loader
+        self.setFrameStyle(QFrame.Shape.Box)
+        self.setLineWidth(1)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+
+        # Property checkbox and label
+        prop_layout = QHBoxLayout()
+        prop_label = QLabel(f"{prop_name}")
+        prop_label.setWordWrap(True)
+        prop_layout.addWidget(prop_label, 1)
+        layout.addLayout(prop_layout)
+
+        var_title = QLabel("Variables:")
+        var_title.setStyleSheet("font-weight: bold;")
+        layout.addWidget(var_title)
+        self.variable_widgets = {}
+       
+        self.setLayout(layout)
+
+    def add_variable(self, var_name):
+        self.var_container = QWidget()
+        var_layout = QVBoxLayout(self.var_container)
+        var_layout.setContentsMargins(20, 5, 5, 5)
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        var_layout.addWidget(separator)
+
+        var_widget = VariableBox(var_name, parent=self)
+        if self.renderer_loader:
+            var_widget.renderer_changed.connect(self.renderer_loader._on_variable_renderer_changed)
+        var_layout.addWidget(var_widget)
+        self.variable_widgets[var_name] = var_widget
+
+        self.layout().addWidget(self.var_container)
+
+    def _on_property_toggled(self, state):
+        checked = state == Qt.CheckState.Checked
+        self.property_toggled.emit(self.prop_data['name'], checked)
+    
+    def is_checked(self):
+        return self.prop_checkbox.isChecked()
+    
+    def set_checked(self, checked):
+        self.prop_checkbox.setChecked(checked)
+
+
+class RendererLoader(QWidget):
+    renderers_changed = pyqtSignal()  # emitted when any variable renderer changes
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.property_widgets = {}
+        self._variable_renderers = {}
+        self._is_syncing = False  # Flag to prevent recursive synchronization
+        
+        # Create scrollable area for properties
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.content_layout.setSpacing(8)
+        self.scroll_area.setWidget(self.content_widget)
+        
+        # Synchronization checkbox
+        self.sync_checkbox = QCheckBox("Sync variables with same name")
+        self.sync_checkbox.setToolTip("When enabled, changing a renderer for a variable will apply to all variables with the same name")
+        
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.scroll_area)
+        layout.addWidget(self.sync_checkbox)
+        layout.addStretch()
+
+    def load_properties(self, counter_examples: dict):
+        """
+        Loads a list of properties into the widget from the counterexample cache
+        """
+        self.property_widgets = {}
+        prop_names = defaultdict(set)
+
+        for key in counter_examples.keys():
+            key_parts = key.split('-')
+            prop_name, _, var_name = key_parts
+            prop_names[prop_name].add(var_name)
+        
+        # Clear existing widgets
+        while self.content_layout.count():
+            item = self.content_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Create property widgets
+        for prop_name in prop_names:
+            prop_widget = PropertyBox(prop_name, renderer_loader=self, parent=self)
+            prop_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            self.content_layout.addWidget(prop_widget)
+            self.property_widgets[prop_name] = prop_widget
+
+        # Add variables to each property
+        for prop_name, var_names in prop_names.items():
+            for var_name in var_names:
+                self.property_widgets[prop_name].add_variable(var_name)
+    
+    def _on_variable_renderer_changed(self, variable_name, renderer):
+        """Handle when a variable's renderer selection changes."""
+        self._variable_renderers[variable_name] = renderer
+        
+        # If synchronization is enabled and we're not already syncing, update all variables with the same name
+        if self.sync_checkbox.isChecked() and not self._is_syncing:
+            self._sync_variable_renderer(variable_name, renderer)
+        
+        # Prevent recursive signal calls
+        if not self._is_syncing:
+            self.renderers_changed.emit()
+    
+    def _sync_variable_renderer(self, variable_name, renderer):
+        """Update all variables with the same name to use the given renderer."""
+        self._is_syncing = True  # Set flag to prevent recursive calls
+        try:
+            for prop_widget in self.property_widgets.values():
+                var_widget = prop_widget.variable_widgets.get(variable_name)
+                var_widget._set_renderer(renderer)
+        except Exception as e:
+            print(f"Error during variable renderer synchronization: {e}")
+        finally:
+            self._is_syncing = False
+
+    @property
+    def property_items(self):
+        return [(name, widget) for name, widget in self.property_widgets.items()]
+    
+    def get_variable_renderers(self):
+        """Return a dict of property_name-variable_name -> renderer for all variables."""
+        renderers = {}
+        for prop_name, prop_widget in self.property_widgets.items():
+            for var_name, var_widget in prop_widget.variable_widgets.items():
+                key = f"{prop_name}-{var_name}"
+                if var_widget.renderer is not None:
+                    renderers[key] = var_widget.renderer
+        return renderers
 
 
 class CounterExampleWidget(QWidget):
@@ -222,23 +497,45 @@ class CounterExampleTab(QWidget):
         self.folder_label = QLabel(CACHE_DIR)
         counter_examples_json = decode_counter_examples(CACHE_DIR)
         control_layout.addWidget(self.folder_label)
+        
+        # Add control layout to main layout
+        self.layout.addLayout(control_layout)
 
-        # Content widget
+        # Main horizontal layout for property loader (left) and content (right)
+        main_horizontal_layout = QHBoxLayout()
+
+        # Property loader on the left side
+        self.property_loader = RendererLoader(parent=self)
+        self.property_loader.renderers_changed.connect(self._on_renderers_changed)
+        self.property_loader.setMaximumWidth(350)  # Increase width for more breathing room
+        self.property_loader.setMinimumWidth(320)  # Increase minimum width as well
+        self.property_loader.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        main_horizontal_layout.addWidget(self.property_loader)
+
+        # Content widget on the right side
         self.content_widget = CounterExampleWidget(parent=self)
         self.content_widget.set_data(counter_examples_json)
-        self.layout.addWidget(self.content_widget)
+        main_horizontal_layout.addWidget(self.content_widget, 1)  # Give it stretch factor to take remaining space
+
+        # Add the horizontal layout to main layout
+        self.layout.addLayout(main_horizontal_layout)
         self.setLayout(self.layout)
+
+    def refresh_from_cache(self):
+        """Re-read counter examples from the cache directory."""
+        if os.path.exists(CACHE_DIR):
+            counter_examples = decode_counter_examples(CACHE_DIR)
+            self.property_loader.load_properties(counter_examples)
+            self.content_widget.set_data(counter_examples)
+            self._on_renderers_changed()
+        else:
+            print(f"Cache directory {CACHE_DIR} does not exist")
+
+    def _on_renderers_changed(self):
+        """Handle when renderers change in the property loader."""
+        variable_renderers = self.property_loader.get_variable_renderers()
+        self.content_widget.set_modes(variable_renderers)
 
     def set_modes(self, modes: Dict[str, BaseRenderer]):
         """Set the rendering modes for variables."""
         self.content_widget.set_modes(modes)
-
-    def refresh_from_cache(self):
-        """Re-read counter examples from the cache directory."""
-        print(f"=== refresh_from_cache called ===")
-        if os.path.exists(CACHE_DIR):
-            counter_examples_json = decode_counter_examples(CACHE_DIR)
-            print(f"Decoded {len(counter_examples_json)} counter examples")
-            self.content_widget.set_data(counter_examples_json)
-        else:
-            print(f"Cache directory {CACHE_DIR} does not exist")
