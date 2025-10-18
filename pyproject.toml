@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-vehicle_gui = "vehicle_gui.__main__:main"
+vehicle-gui = "vehicle_gui.__main__:main"
 
 [project.entry-points."pygments.lexers"]
 external = "vehicle_gui.external.lexer:ExternalLexer"
