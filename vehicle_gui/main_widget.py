@@ -393,12 +393,12 @@ class VehicleGUI(QMainWindow):
             self.input_view.clear_input_boxes()
             return False
         
-        # Preserve current resource state before regenerating
+        # Regenerate input boxes and properties
         self.regenerate_input_boxes()
-
-        # Remember selected properties
         selected_properties = self.property_view.selected_properties()
         self.regenerate_properties(selected_properties)
+        
+        self.log_console.clear()
         return True                            
 
     def save_before_operation(self):
